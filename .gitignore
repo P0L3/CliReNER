@@ -1,0 +1,23 @@
+*
+
+# and don't ignore files ending with ".py"
+!.gitignore
+!*.py
+!*.txt
+!*.png
+!*.jpeg
+!*.pdf
+*.pickle
+!*.odp
+!*.yml
+!*.md
+!*.png
+!*.svg
+!*.ipynb
+
+!FINETUNES
+!FINETUNES/GLINER/
+!FINETUNES/GLINER/PLOTS/
+!FINETUNES/SPANMARKER/
+!PLOTS
+!REPORTS
