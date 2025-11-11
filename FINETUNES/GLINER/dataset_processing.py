@@ -34,9 +34,11 @@ BIODIVNER_LABELS = {
     'Matter', 'Location', 'Environment'
 }
 
-CWED4ETA_DIR = "C:\\Users\\ANDRIJA_RAD\\CWED4ETA\\CWED4ETA\\DATA\\CWED4ETA\\project-6-at-2025-10-15-07-02-c3e9e3bf.json" # PC2 
+CLIRENER_DIR = "C:\\Users\\ANDRIJA_RAD\\CLIRENER\\CliReNER\\DATA\\LABEL_STUDIO\\project-28-at-2025-11-11-12-33-f873727e.json"
+
+# "C:\\Users\\ANDRIJA_RAD\\CWED4ETA\\CWED4ETA\\DATA\\CWED4ETA\\project-6-at-2025-10-15-07-02-c3e9e3bf.json" # PC2 
 # "/home/p0l3/RAD/CWED4ETA/CWED4ETA/CWED4ETA/DATA/CWED4ETA/project-6-at-2025-10-15-07-27-c3e9e3bf.json"
-CWED4ETA_LABELS = {
+CLIRENER_LABELS_V0 = {
     "Ecosystem", "Energy Source", "Natural Disaster", 
     "Meteorological Phenomenon", "Quantity", "Astronomical Object", 
     "Body of Water", "Disease", "Location", 
@@ -48,7 +50,21 @@ CWED4ETA_LABELS = {
     "Artefact", "Body Part", "Symptom"
 }
 
-CWED4ETA_ANNOTATOR_IMPORTANCE = [2, 1, 3]
+CLIRENER_LABELS_V1 = {
+    "Ecosystem", "Energy Source", "Natural Disaster", 
+    "Meteorological Phenomenon", "Quantity", "Intellectual Artefact", 
+    "Body of Water", "Disease", "Location", 
+    "Physical Phenomenon", "Chemical", "Time Period", 
+    "Organization", "Natural Phenomenon", "Field of Study", 
+    "Mathematical Expression", "Measuring Device", "Geographical Feature", 
+    "System", "Satellite", "Organism", 
+    "Method", "Other", "Person", 
+    "Physical Artefact", "Body Part", "Asset",
+    "Policy", 
+}
+
+
+CLIRENER_ANNOTATOR_IMPORTANCE = [2, 1, 3]
 
 
 # ---------------- PREPREPROCESSING
@@ -185,7 +201,7 @@ def biodivner_process_bio_documents(data_dir: str, labels_to_keep: Set[str], spl
 
 
 
-def cwed4eta_process_json_file(file_path = CWED4ETA_DIR): 
+def cwed4eta_process_json_file(file_path = CLIRENER_DIR): 
     with open(file_path) as f:
         json_string = json.load(f)
     
@@ -196,7 +212,7 @@ def cwed4eta_process_json_file(file_path = CWED4ETA_DIR):
         selected_annotations = None
         annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in CWED4ETA_ANNOTATOR_IMPORTANCE:
+        for annotator_id in CLIRENER_ANNOTATOR_IMPORTANCE:
             if annotator_id in annotations_by_id:
                 # If the preferred annotator is found, select their annotations and stop searching
                 selected_annotations = annotations_by_id[annotator_id].get('result', [])
@@ -349,10 +365,10 @@ def load_biodivner(split = ["train", "validation"]):
     return convert_to_token_spans(biodivner_structured_data)
 
 def load_cwed4eta():
-    print(f"Loading '{CWED4ETA_DIR}' with no splits.")
+    print(f"Loading '{CLIRENER_DIR}' with no splits.")
     
     print("COnverting to desirable char spans.")
-    cwed4eta_structured_data = cwed4eta_process_json_file(CWED4ETA_DIR)
+    cwed4eta_structured_data = cwed4eta_process_json_file(CLIRENER_DIR)
     
     print("COnverting from char spans to token spans.")
     return convert_to_token_spans(cwed4eta_structured_data)
@@ -686,3 +702,67 @@ def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_
 
     return dataset_dict
 
+def analyze_annotation_data(file_path: str) -> pd.DataFrame:
+    """
+    Parses a Label Studio JSON export to count total and unique entities per type
+    and collects all entity texts for Top-N analysis.
+
+    Args:
+        file_path: The path to the Label Studio JSON export file.
+
+    Returns:
+        A pandas DataFrame with counts and diversity ratio for each entity type.
+        Also returns a dictionary mapping entity types to a list of their texts.
+    """
+    total_entity_counts = defaultdict(int)
+    unique_entities = defaultdict(set)
+    all_entity_texts = defaultdict(list) # <-- NEW: To store all entity texts for Top-N
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    for task in data:
+        if not task.get('annotations'):
+            continue
+            
+        selected_annotations = None
+        annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
+        
+        for annotator_id in CLIRENER_ANNOTATOR_IMPORTANCE:
+            if annotator_id in annotations_by_id:
+                # If the preferred annotator is found, select their annotations and stop searching
+                selected_annotations = annotations_by_id[annotator_id].get('result', [])
+                break
+
+        if selected_annotations is None:
+            continue    
+        
+        for annotation in selected_annotations:
+            if annotation.get('type') != 'labels':
+                continue
+            
+            value = annotation.get('value', {})
+            if 'text' in value and 'labels' in value and value['labels']:
+                entity_label = value['labels'][0]
+                entity_text = value['text']
+                
+                total_entity_counts[entity_label] += 1
+                unique_entities[entity_label].add(entity_text.lower())
+                # NEW: Append the lowercased text for Top-N analysis
+                all_entity_texts[entity_label].append(entity_text.lower())
+
+    analysis_data = []
+    for label in sorted(total_entity_counts.keys()):
+        total_count = total_entity_counts[label]
+        unique_count = len(unique_entities[label])
+        diversity_ratio = unique_count / total_count if total_count > 0 else 0
+        analysis_data.append({
+            'EntityType': label,
+            'TotalCount': total_count,
+            'UniqueCount': unique_count,
+            'DiversityRatio': diversity_ratio
+        })
+    
+    df = pd.DataFrame(analysis_data)
+    # The second return value is the new dictionary of entity texts
+    return df, all_entity_texts
