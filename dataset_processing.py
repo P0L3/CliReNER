@@ -700,3 +700,67 @@ def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_
 
     return dataset_dict
 
+def analyze_annotation_data(file_path: str) -> pd.DataFrame:
+    """
+    Parses a Label Studio JSON export to count total and unique entities per type
+    and collects all entity texts for Top-N analysis.
+
+    Args:
+        file_path: The path to the Label Studio JSON export file.
+
+    Returns:
+        A pandas DataFrame with counts and diversity ratio for each entity type.
+        Also returns a dictionary mapping entity types to a list of their texts.
+    """
+    total_entity_counts = defaultdict(int)
+    unique_entities = defaultdict(set)
+    all_entity_texts = defaultdict(list) # <-- NEW: To store all entity texts for Top-N
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    for task in data:
+        if not task.get('annotations'):
+            continue
+            
+        selected_annotations = None
+        annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
+        
+        for annotator_id in CLIRENER_ANNOTATOR_IMPORTANCE:
+            if annotator_id in annotations_by_id:
+                # If the preferred annotator is found, select their annotations and stop searching
+                selected_annotations = annotations_by_id[annotator_id].get('result', [])
+                break
+
+        if selected_annotations is None:
+            continue    
+        
+        for annotation in selected_annotations:
+            if annotation.get('type') != 'labels':
+                continue
+            
+            value = annotation.get('value', {})
+            if 'text' in value and 'labels' in value and value['labels']:
+                entity_label = value['labels'][0]
+                entity_text = value['text']
+                
+                total_entity_counts[entity_label] += 1
+                unique_entities[entity_label].add(entity_text.lower())
+                # NEW: Append the lowercased text for Top-N analysis
+                all_entity_texts[entity_label].append(entity_text.lower())
+
+    analysis_data = []
+    for label in sorted(total_entity_counts.keys()):
+        total_count = total_entity_counts[label]
+        unique_count = len(unique_entities[label])
+        diversity_ratio = unique_count / total_count if total_count > 0 else 0
+        analysis_data.append({
+            'EntityType': label,
+            'TotalCount': total_count,
+            'UniqueCount': unique_count,
+            'DiversityRatio': diversity_ratio
+        })
+    
+    df = pd.DataFrame(analysis_data)
+    # The second return value is the new dictionary of entity texts
+    return df, all_entity_texts
