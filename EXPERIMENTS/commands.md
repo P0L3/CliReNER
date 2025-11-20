@@ -1,0 +1,4 @@
+A file that notes the used commands during the experiment.
+
+**create_hf_dataset.py**
+`python3 -m EXPERIMENTS.create_hf_dataset --lsfile_path "RESULTS/training_50_EneSou_BodOfWat_Org_PhyPhe_Loc_PhyArt_NatDis_Che_BodPar_MatExp_GeoFea_Org_IntArt_Sys_Ass_Met_FieOfStu_MetPhe_TimPer_Eco_Pol_NatPhe_Qua_Per_Dis_MeaDev_Sat.json"`
