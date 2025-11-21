@@ -12,6 +12,7 @@ Disclaimer:
     This code was reformatted, optimized, and extended with additional features 
     (CLI support, visualization, CSV export) by an AI Assistant.
 """
+
 import os
 import argparse
 import numpy as np
@@ -20,7 +21,6 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from datasets import load_dataset, concatenate_datasets
 
-# --- Helper Function to Calculate Stats ---
 def process_dataset_split(dataset_split, label_names):
     """
     Parses a dataset split to return raw statistics and class counts.
@@ -78,18 +78,32 @@ def process_dataset_split(dataset_split, label_names):
             
         entity_densities.append(current_sentence_entity_count)
 
+    # Calculate Aggregates
+    mean_len = np.mean(sentence_lengths)
+    median_len = np.median(sentence_lengths)
+    avg_density = np.mean(entity_densities)
+    avg_span = np.mean(span_lengths) if span_lengths else 0
+    
+    # Calculate Ratios
+    # Ratio 1: Median Length / Density (Robust)
+    ratio_median = median_len / avg_density if avg_density > 0 else 0
+    
+    # Ratio 2: Mean Length / Density (Token Budgeting)
+    ratio_mean = mean_len / avg_density if avg_density > 0 else 0
+
     stats = {
-        "Sentence Length (Mean)": np.mean(sentence_lengths),
-        "Sentence Length (Median)": np.median(sentence_lengths),
-        "Entity Density (Avg entities/sent)": np.mean(entity_densities),
-        "Span Length (Avg tokens/entity)": np.mean(span_lengths) if span_lengths else 0,
+        "Sentence Length (Mean)": mean_len,
+        "Sentence Length (Median)": median_len,
+        "Entity Density (Avg entities/sent)": avg_density,
+        "Ratio (Median Len / Density)": ratio_median,
+        "Ratio (Mean Len / Density)": ratio_mean,
+        "Span Length (Avg tokens/entity)": avg_span,
         "Total Entities": sum(entity_densities),
         "Total Sentences": len(sentence_lengths)
     }
     
     return stats, class_counts
 
-# --- Helper Function to Plot ---
 def plot_class_distribution(class_counts, split_name, hf_name, safe_hf_name, output_dir):
     """
     Generates and saves a histogram of class distribution.
@@ -175,8 +189,10 @@ def main():
     splits_to_process["overall"] = combined_dataset
 
     # --- 3. Calculation Loop ---
-    print(f"\n{'Split':<12} | {'Sent Len':<10} | {'Density':<10} | {'Span Len':<10} | {'Entities':<10}")
-    print("-" * 65)
+    # Updated Header to show both ratios
+    header = f"{'Split':<12} | {'Len(Mean)':<10} | {'Density':<10} | {'Ratio(Med)':<10} | {'Ratio(Mean)':<10} | {'Span Len':<10} | {'Entities':<10}"
+    print("\n" + header)
+    print("-" * len(header))
 
     all_stats_data = []
 
@@ -192,6 +208,8 @@ def main():
         print(f"{split_name:<12} | "
               f"{stats['Sentence Length (Mean)']:<10.2f} | "
               f"{stats['Entity Density (Avg entities/sent)']:<10.2f} | "
+              f"{stats['Ratio (Median Len / Density)']:<10.2f} | "
+              f"{stats['Ratio (Mean Len / Density)']:<10.2f} | "
               f"{stats['Span Length (Avg tokens/entity)']:<10.2f} | "
               f"{int(stats['Total Entities']):<10}")
         
@@ -199,12 +217,11 @@ def main():
         plot_class_distribution(counts, split_name, hf_name, safe_hf_name, output_dir)
         
         # Collect Data for CSV
-        # Add the split name to the dictionary for the CSV row
         csv_row = {"Split": split_name}
         csv_row.update(stats)
         all_stats_data.append(csv_row)
 
-    print("-" * 65)
+    print("-" * len(header))
 
     # --- 4. Save to CSV ---
     csv_filename = f"{safe_hf_name}_statistics.csv"
@@ -212,10 +229,21 @@ def main():
     
     df_stats = pd.DataFrame(all_stats_data)
     
-    # Reorder columns to put Split first (just in case dict order varies)
-    cols = ["Split", "Sentence Length (Mean)", "Sentence Length (Median)", 
-            "Entity Density (Avg entities/sent)", "Span Length (Avg tokens/entity)", 
-            "Total Entities", "Total Sentences"]
+    # Reorder columns for readability in CSV
+    cols = [
+        "Split", 
+        "Sentence Length (Mean)", 
+        "Sentence Length (Median)", 
+        "Entity Density (Avg entities/sent)", 
+        "Ratio (Median Len / Density)",
+        "Ratio (Mean Len / Density)",
+        "Span Length (Avg tokens/entity)", 
+        "Total Entities", 
+        "Total Sentences"
+    ]
+    
+    # Ensure we only select columns that exist
+    cols = [c for c in cols if c in df_stats.columns]
     df_stats = df_stats[cols]
     
     df_stats.to_csv(csv_filepath, index=False)
