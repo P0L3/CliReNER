@@ -1,3 +1,15 @@
+"""
+datasets
+seqeval
+matplotlib
+pandas
+numpy
+scikit-learn
+scikit-multilearn
+"""
+
+
+
 import json
 from datasets import load_dataset
 
@@ -199,7 +211,7 @@ def biodivner_process_bio_documents(data_dir: str, labels_to_keep: Set[str], spl
 
 
 
-def cwed4eta_process_json_file(file_path = CLIRENER_DIR): 
+def cwed4eta_process_json_file(file_path = CLIRENER_DIR, annotator_importance = CLIRENER_ANNOTATOR_IMPORTANCE): 
     with open(file_path) as f:
         json_string = json.load(f)
     
@@ -210,7 +222,7 @@ def cwed4eta_process_json_file(file_path = CLIRENER_DIR):
         selected_annotations = None
         annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in CLIRENER_ANNOTATOR_IMPORTANCE:
+        for annotator_id in annotator_importance:
             if annotator_id in annotations_by_id:
                 # If the preferred annotator is found, select their annotations and stop searching
                 selected_annotations = annotations_by_id[annotator_id].get('result', [])
@@ -236,10 +248,15 @@ def cwed4eta_process_json_file(file_path = CLIRENER_DIR):
                         'end': value["end"]
                     }
                 )
+        paper_id = task["data"]["paper_id"]
+        sentence_id = task["data"]["sentence_id"]
+        
+        compound_id = f"{paper_id}-{sentence_id}"
         dataset.append(
             {
                 "text": text,
-                "entities": entities
+                "entities": entities,
+                "id": compound_id
             }
         )
         
@@ -267,6 +284,9 @@ def convert_to_token_spans(structured_docs_with_char_spans):
 
     for doc in structured_docs_with_char_spans:
         text = doc['text']
+
+        if "id" in doc:
+            id = doc["id"]
         
         # 1. Tokenize the text with the custom function
         new_tokens = tokenize_text(text)
@@ -301,11 +321,18 @@ def convert_to_token_spans(structured_docs_with_char_spans):
                     [token_span_start, token_span_end, entity["label"]])
         
         # 4. Assemble the final dictionary for the document
-        final_data.append({
-            # "text": text,
-            "tokenized_text": new_tokens,
-            "ner": doc_entities_token_spans
-        })
+        if "id" in doc:
+            final_data.append({
+                "id": id,
+                "tokenized_text": new_tokens,
+                "ner": doc_entities_token_spans
+            })
+        else:
+            final_data.append({
+                # "text": text,
+                "tokenized_text": new_tokens,
+                "ner": doc_entities_token_spans
+            })
         
     return final_data
 
@@ -700,7 +727,7 @@ def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_
 
     return dataset_dict
 
-def analyze_annotation_data(file_path: str) -> pd.DataFrame:
+def analyze_annotation_data(file_path: str, annotator_importance = CLIRENER_ANNOTATOR_IMPORTANCE) -> pd.DataFrame:
     """
     Parses a Label Studio JSON export to count total and unique entities per type
     and collects all entity texts for Top-N analysis.
@@ -726,7 +753,7 @@ def analyze_annotation_data(file_path: str) -> pd.DataFrame:
         selected_annotations = None
         annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in CLIRENER_ANNOTATOR_IMPORTANCE:
+        for annotator_id in annotator_importance:
             if annotator_id in annotations_by_id:
                 # If the preferred annotator is found, select their annotations and stop searching
                 selected_annotations = annotations_by_id[annotator_id].get('result', [])
