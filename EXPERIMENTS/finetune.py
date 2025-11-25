@@ -1,209 +1,172 @@
 import argparse
-from datasets import load_dataset
+import json
 import torch
-
-from pathlib import Path
-
 import re
+import os
+from pathlib import Path
+from datasets import load_dataset
+from transformers import TrainingArguments
 
-def shorten_hf_name(hf_id):
-    """
-    Transforms a Hugging Face model ID into a short, filename-safe string.
-    
-    Example: 
-        "P0L3/CliReNER_v_1_1_28_SILVER" -> "CliReNER_v_1_1_28_SILVER"
-        "google-bert/bert-base-uncased" -> "bert_base_uncased"
-    """
-    # 1. Get the model name (remove the organization prefix)
-    name = hf_id.split("/")[-1]
-    
-    # 2. Replace non-alphanumeric characters (-, ., spaces) with underscores
+from dataset_processing import hf_dataset_to_gliner_format
+
+
+def shorten_name(name):
+    """Transforms a Hugging Face ID into a clean, filename-safe string."""
+    name = name.split("/")[-1]
     name = re.sub(r"[^a-zA-Z0-9]", "_", name)
-    
-    # 3. Collapse multiple underscores into one
     name = re.sub(r"_+", "_", name)
-    
-    # 4. Remove common redundant suffixes (optional, but cleaner)
-    name = re.sub(r"(_hf|_model)$", "", name, flags=re.IGNORECASE)
-    
     return name.strip("_")
 
-parser = argparse.ArgumentParser(
-                    prog='ModelFineTuning',
-                    description='Program uses HuggingFace Dataset to fine-tune NER models.',
-                    epilog='...')
+def get_output_dir(base_dir, model_type, model_id, dataset_id):
+    """Unified naming convention: models/TYPE/ModelName_DatasetName"""
+    m_name = shorten_name(model_id)
+    d_name = shorten_name(dataset_id)
+    return Path(base_dir) / model_type / f"{m_name}_{d_name}"
 
-parser.add_argument("--model_type", type=str)
-parser.add_argument("--dataset_id", type=str)
-parser.add_argument("--model_id", type=str)
+def load_config(config_path):
+    with open(config_path, 'r') as f:
+        return json.load(f)
 
-args = parser.parse_args()
-
-# Check CUDA
-if torch.cuda.is_available():
-    print(f"CUDA is available. Using {torch.cuda.device_count()} GPU(s).")
-    print(f"Device Name: {torch.cuda.get_device_name(0)}")
-    device = torch.device('cuda:0')
-else:
-    print("CUDA is not available. Training will run on CPU.")
-    device = torch.device('cpu')
-
-# Load data
-dataset = load_dataset(args.dataset_id)
-print(f"Loaded HF dataset: {args.dataset_id}.")
-
-# Dataset Info
-labels = dataset["train"].features["ner_tags"].feature.names
-print(f"Dataset contains {len(labels)} labels: [\"{labels[0]}\", ..., \"{labels[len(labels)//2]}\", ..., \"{labels[-1]}\"]")
-print(f"Found {len(dataset)} splits: {list(dataset.keys())}")
-for split in dataset:
-    print(f"\t{split}: {len(dataset[split])} rows")
-
-# Load model backend (GLiNER or specific BER-based encoder)
-dataset_name = shorten_hf_name(args.dataset_id)
-model_name = shorten_hf_name(args.model_id)
-
-print(f"Performing fine-tuning based on {args.model_type} ...")
-
-if args.model_type == "GLINER":
-    # import json
-    # import random
-
-    # from seqeval.metrics.sequence_labeling import get_entities
-    # import re
-    # from collections import Counter
-    # # import matplotlib.pyplot as plt
-    # import pandas as pd
-    # from typing import List, Dict
-
-    from dataset_processing import *
-    # import os
-    # os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    # os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"]="python"
-
-    from gliner import GLiNERConfig, GLiNER
-    from gliner.training import Trainer, TrainingArguments
-    from gliner.data_processing.collator import DataCollatorWithPadding, DataCollator
-    # from gliner.utils import load_config_as_namespace
-    # from gliner.data_processing import WordsSplitter, GLiNERDataset
+def train_gliner(model_id, dataset, labels, config, output_dir, device):
+    from gliner import GLiNER
+    from gliner.training import Trainer, TrainingArguments as GlinerArgs
+    from gliner.data_processing.collator import DataCollator
     
-    train_dataset = hf_dataset_to_gliner_format(dataset["train"], labels)
-    test_dataset = hf_dataset_to_gliner_format(dataset["validation"], labels)
+    print("--- Initializing GLiNER Training ---")
     
-    model = GLiNER.from_pretrained(args.model_id)
+    # Process Datasets
+    train_ds = hf_dataset_to_gliner_format(dataset["train"], labels)
+    val_ds = hf_dataset_to_gliner_format(dataset["validation"], labels)
+    # test_ds = hf_dataset_to_gliner_format(dataset["test"], labels) 
+
+    model = GLiNER.from_pretrained(model_id)
+    model.to(device)
     
     data_collator = DataCollator(model.config, data_processor=model.data_processor, prepare_labels=True)
     
-    model.to(device)
+    # Extract params from JSON
+    train_params = config.get("training_parameters", {})
     
-    
-    # calculate number of epochs
-    num_steps = 4000
-    batch_size = 8
-    data_size = len(train_dataset)
-    num_batches = data_size // batch_size
-    num_epochs = max(1, num_steps // num_batches)
+    # Dynamic epoch calculation logic 
+    if train_params.get("calculate_epochs_from_steps", False):
+        target_steps = train_params.get("target_steps", 4000)
+        batch_size = train_params.get("per_device_train_batch_size", 8)
+        num_batches = len(train_ds) // batch_size
+        num_epochs = max(1, target_steps // num_batches)
+        train_params["num_train_epochs"] = num_epochs
+        # Remove custom keys so they don't crash TrainingArguments
+        del train_params["calculate_epochs_from_steps"]
+        del train_params["target_steps"]
 
-    training_args = TrainingArguments(
-        output_dir="models/GLiNER_med_v2_5/CliReNER_v_1_1_28_SILVER",
-        learning_rate=5e-6,
-        weight_decay=0.01,
-        others_lr=1e-5,
-        others_weight_decay=0.01,
-        lr_scheduler_type="linear", #cosine
-        warmup_ratio=0.1,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        focal_loss_alpha=0.75,
-        focal_loss_gamma=2,
-        num_train_epochs=num_epochs,
-        eval_strategy="steps", # PC1, # evaluation_strategy="steps",
-        save_steps = 100,
-        save_total_limit=10,
-        dataloader_num_workers = 0,
-        use_cpu = False,
-        report_to="none",
-        )
+    # Initialize Training Arguments
+    # We update output_dir explicitly to ensure uniformity
+    training_args = GlinerArgs(
+        output_dir=str(output_dir),
+        **train_params
+    )
 
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=test_dataset,
+        train_dataset=train_ds,
+        eval_dataset=val_ds,
         tokenizer=model.data_processor.transformer_tokenizer,
         data_collator=data_collator,
     )
 
     trainer.train()
-    
-    
-    print("GLINER")
-    
-elif args.model_type == "SPANMARKER":
-    from transformers import TrainingArguments
-    from span_marker import SpanMarkerModel, Trainer, SpanMarkerModelCardData
+    # Save final model explicitly in the unified format
+    model.save_pretrained(output_dir / "checkpoint-final")
 
+def train_spanmarker(model_id, dataset, labels, config, output_dir, device):
+    from span_marker import SpanMarkerModel, Trainer, SpanMarkerModelCardData
     from transformers import AutoConfig
+
+    print("--- Initializing SpanMarker Training ---")
+
+    model_params = config.get("model_parameters", {})
+    train_params = config.get("training_parameters", {})
     
-    
-    new_model_id = f"P0L3/span-marker-{model_name}-{dataset_name}_25612814_100"
+    # Model Card Data
+    dataset_name = shorten_name(dataset.builder_name if dataset.builder_name else "dataset")
+    card_data = SpanMarkerModelCardData(
+        model_id=f"{shorten_name(model_id)}-{dataset_name}",
+        encoder_id=model_id,
+        dataset_id=dataset_name,
+        license="cc-by-sa-4.0",
+        language="en",
+    )
+
+    # Initialize Model
     model = SpanMarkerModel.from_pretrained(
-        args.model_id,
+        model_id,
         labels=labels,
-        # SpanMarker hyperparameters:
-        model_max_length=256,
-        marker_max_length=128,
-        entity_max_length=14,
-        # Model card arguments
-        model_card_data=SpanMarkerModelCardData(
-            model_id=new_model_id,
-            encoder_id=args.model_id,
-            dataset_name=dataset_name,
-            dataset_id=args.dataset_id,
-            license="cc-by-sa-4.0",
-            language="en",
-        ),
+        model_card_data=card_data,
+        **model_params # e.g. model_max_length, marker_max_length, entity_max_length
     )
-    
+
+    # Ensure encoder config exists
     if not hasattr(model.config, "encoder") or model.config.encoder is None:
-        model.config.encoder = AutoConfig.from_pretrained(args.model_id)
-    
-    # Prepare the 🤗 transformers training arguments
-    output_dir = Path("models") / args.model_id
+        model.config.encoder = AutoConfig.from_pretrained(model_id)
+
+    # Initialize Training Arguments
     args = TrainingArguments(
-        output_dir=output_dir,
-        # Training Hyperparameters:
-        learning_rate=5e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
-        num_train_epochs=100,
-        weight_decay=0.01,
-        warmup_ratio=0.1,
-        fp16=True,  # Replace `bf16` with `fp16` if your hardware can't use bf16.
-        # Other Training parameters
-        logging_first_step=True,
-        logging_steps=50,
-        evaluation_strategy="steps",
-        save_strategy="steps",
-        eval_steps=3000,
-        save_total_limit=5,
-        dataloader_num_workers=2,
+        output_dir=str(output_dir),
+        **train_params
     )
-    
-    # Initialize the trainer using our model, training args & dataset, and train
+
     trainer = Trainer(
         model=model,
         args=args,
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],
     )
+
     trainer.train()
     
-    # Compute & save the metrics on the test set
-    metrics = trainer.evaluate(dataset["test"], metric_key_prefix="test")
-    trainer.save_metrics("test", metrics)
-    
-    # Save the final checkpoint
     trainer.save_model(output_dir / "checkpoint-final")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Fine-tune NER models (GLiNER or SpanMarker) using JSON configs.')
     
-    print("SPANMARKER")
+    parser.add_argument("--model_type", type=str, required=True, choices=["GLINER", "SPANMARKER"])
+    parser.add_argument("--dataset_id", type=str, required=True)
+    parser.add_argument("--model_id", type=str, required=True)
+    parser.add_argument("--config_path", type=str, required=True, help="Path to the JSON configuration file")
+    
+    args = parser.parse_args()
+
+    # 1. Device Setup
+    if torch.cuda.is_available():
+        print(f"CUDA available: {torch.cuda.get_device_name(0)}")
+        device = torch.device('cuda:0')
+    else:
+        print("CUDA not available. Using CPU.")
+        device = torch.device('cpu')
+
+    # 2. Load Config
+    config = load_config(args.config_path)
+
+    # 3. Load Data
+    print(f"Loading dataset: {args.dataset_id}")
+    dataset = load_dataset(args.dataset_id)
+    
+    # Extract labels (Assumes standard NER format)
+    if "ner_tags" in dataset["train"].features:
+        labels = dataset["train"].features["ner_tags"].feature.names
+    else:
+        # Fallback or custom logic if your dataset structure differs
+        labels = [] 
+        print("Warning: Could not automatically detect 'ner_tags' feature names.")
+
+    print(f"Labels found: {len(labels)}")
+
+    # 4. Determine Output Path
+    output_dir = get_output_dir("models", args.model_type, args.model_id, args.dataset_id)
+    print(f"Output directory set to: {output_dir}")
+
+    # 5. Run Training
+    if args.model_type == "GLINER":
+        train_gliner(args.model_id, dataset, labels, config, output_dir, device)
+    elif args.model_type == "SPANMARKER":
+        train_spanmarker(args.model_id, dataset, labels, config, output_dir, device)
