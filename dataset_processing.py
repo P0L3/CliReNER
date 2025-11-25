@@ -644,6 +644,68 @@ def transform_to_ner_format(dataset, labels):
         
     return transformed_data, tag_to_id
 
+def hf_dataset_to_gliner_format(hf_dataset_split, label_names):
+    """
+    Transforms HF dataset (tokens, ner_tags) to List[Dict] (tokenized_text, ner=[start, end, label]).
+    Note: The end index is INCLUSIVE.
+    """
+    transformed_data = []
+
+    for row in hf_dataset_split:
+        tokens = row['tokens']
+        tags = row['ner_tags']
+        
+        entities = []
+        current_start = None
+        current_label = None
+        
+        for i, tag_id in enumerate(tags):
+            tag_name = label_names[tag_id]
+            
+            if tag_name.startswith("B-"):
+                # 1. If an entity is currently open, close it first
+                if current_start is not None:
+                    # End index is i-1 (inclusive)
+                    entities.append([current_start, i - 1, current_label])
+                
+                # 2. Start new entity
+                current_start = i
+                current_label = tag_name[2:] # Remove "B-"
+                
+            elif tag_name.startswith("I-"):
+                # Check consistency: if we see I-Tag but current is None or mismatch
+                clean_name = tag_name[2:]
+                
+                if current_start is None:
+                    # Treat isolated I-tag as a start (robustness)
+                    current_start = i
+                    current_label = clean_name
+                elif current_label != clean_name:
+                    # If type changes (e.g. B-Per then I-Loc), close previous and start new
+                    entities.append([current_start, i - 1, current_label])
+                    current_start = i
+                    current_label = clean_name
+                # Else: just continue (extend span)
+                
+            else: # Tag is "O"
+                if current_start is not None:
+                    entities.append([current_start, i - 1, current_label])
+                    current_start = None
+                    current_label = None
+
+        # End of sentence: if entity is still open, close it
+        if current_start is not None:
+            entities.append([current_start, len(tokens) - 1, current_label])
+            
+        transformed_data.append({
+            "tokenized_text": tokens,
+            "ner": entities,
+            # Keeping ID if you need it, otherwise remove this line
+            "id": row.get('id', '') 
+        })
+        
+    return transformed_data
+
 def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_size=0.1):
     """
     Takes a list of NER data, performs a multi-label stratified split,
