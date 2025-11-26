@@ -638,6 +638,7 @@ def transform_to_ner_format(dataset, labels):
         
         transformed_data.append({
             'id': str(i),
+            'text': text,
             'tokens': tokens,
             'ner_tags': ner_tags
         })
@@ -772,6 +773,7 @@ def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_
     bio_tags = sorted(tag_to_id.keys(), key=lambda k: tag_to_id[k])
     features = datasets.Features({
         "id": datasets.Value("string"),
+        "text": datasets.Value("string"),
         "tokens": datasets.Sequence(datasets.Value("string")),
         "ner_tags": datasets.Sequence(datasets.ClassLabel(names=bio_tags))
     })
