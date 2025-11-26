@@ -1,3 +1,15 @@
+"""
+datasets
+seqeval
+matplotlib
+pandas
+numpy
+scikit-learn
+scikit-multilearn
+"""
+
+
+
 import json
 from datasets import load_dataset
 
@@ -34,9 +46,7 @@ BIODIVNER_LABELS = {
     'Matter', 'Location', 'Environment'
 }
 
-CLIRENER_DIR = "/home/p0l3/RAD/CLIRENER/CliReNER/DATA/LABEL_STUDIO/project-30-at-2025-11-14-12-19-2a7464a5.json"
-# "C:\\Users\\ANDRIJA_RAD\\CLIRENER\\CliReNER\\DATA\\LABEL_STUDIO\\project-28-at-2025-11-11-12-33-f873727e.json"
-# "C:\\Users\\ANDRIJA_RAD\\CWED4ETA\\CWED4ETA\\DATA\\CWED4ETA\\project-6-at-2025-10-15-07-02-c3e9e3bf.json" # PC2 
+CLIRENER_DIR = "C:\\Users\\ANDRIJA_RAD\\CWED4ETA\\CWED4ETA\\DATA\\CWED4ETA\\project-6-at-2025-10-15-07-02-c3e9e3bf.json" # PC2 
 # "/home/p0l3/RAD/CWED4ETA/CWED4ETA/CWED4ETA/DATA/CWED4ETA/project-6-at-2025-10-15-07-27-c3e9e3bf.json"
 CLIRENER_LABELS_V0 = {
     "Ecosystem", "Energy Source", "Natural Disaster", 
@@ -201,7 +211,7 @@ def biodivner_process_bio_documents(data_dir: str, labels_to_keep: Set[str], spl
 
 
 
-def cwed4eta_process_json_file(file_path = CLIRENER_DIR): 
+def cwed4eta_process_json_file(file_path = CLIRENER_DIR, annotator_importance = CLIRENER_ANNOTATOR_IMPORTANCE): 
     with open(file_path) as f:
         json_string = json.load(f)
     
@@ -212,7 +222,7 @@ def cwed4eta_process_json_file(file_path = CLIRENER_DIR):
         selected_annotations = None
         annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in CLIRENER_ANNOTATOR_IMPORTANCE:
+        for annotator_id in annotator_importance:
             if annotator_id in annotations_by_id:
                 # If the preferred annotator is found, select their annotations and stop searching
                 selected_annotations = annotations_by_id[annotator_id].get('result', [])
@@ -238,10 +248,15 @@ def cwed4eta_process_json_file(file_path = CLIRENER_DIR):
                         'end': value["end"]
                     }
                 )
+        paper_id = task["data"]["paper_id"]
+        sentence_id = task["data"]["sentence_id"]
+        
+        compound_id = f"{paper_id}-{sentence_id}"
         dataset.append(
             {
                 "text": text,
-                "entities": entities
+                "entities": entities,
+                "id": compound_id
             }
         )
         
@@ -269,6 +284,9 @@ def convert_to_token_spans(structured_docs_with_char_spans):
 
     for doc in structured_docs_with_char_spans:
         text = doc['text']
+
+        if "id" in doc:
+            id = doc["id"]
         
         # 1. Tokenize the text with the custom function
         new_tokens = tokenize_text(text)
@@ -303,11 +321,18 @@ def convert_to_token_spans(structured_docs_with_char_spans):
                     [token_span_start, token_span_end, entity["label"]])
         
         # 4. Assemble the final dictionary for the document
-        final_data.append({
-            # "text": text,
-            "tokenized_text": new_tokens,
-            "ner": doc_entities_token_spans
-        })
+        if "id" in doc:
+            final_data.append({
+                "id": id,
+                "tokenized_text": new_tokens,
+                "ner": doc_entities_token_spans
+            })
+        else:
+            final_data.append({
+                # "text": text,
+                "tokenized_text": new_tokens,
+                "ner": doc_entities_token_spans
+            })
         
     return final_data
 
@@ -619,6 +644,68 @@ def transform_to_ner_format(dataset, labels):
         
     return transformed_data, tag_to_id
 
+def hf_dataset_to_gliner_format(hf_dataset_split, label_names):
+    """
+    Transforms HF dataset (tokens, ner_tags) to List[Dict] (tokenized_text, ner=[start, end, label]).
+    Note: The end index is INCLUSIVE.
+    """
+    transformed_data = []
+
+    for row in hf_dataset_split:
+        tokens = row['tokens']
+        tags = row['ner_tags']
+        
+        entities = []
+        current_start = None
+        current_label = None
+        
+        for i, tag_id in enumerate(tags):
+            tag_name = label_names[tag_id]
+            
+            if tag_name.startswith("B-"):
+                # 1. If an entity is currently open, close it first
+                if current_start is not None:
+                    # End index is i-1 (inclusive)
+                    entities.append([current_start, i - 1, current_label])
+                
+                # 2. Start new entity
+                current_start = i
+                current_label = tag_name[2:] # Remove "B-"
+                
+            elif tag_name.startswith("I-"):
+                # Check consistency: if we see I-Tag but current is None or mismatch
+                clean_name = tag_name[2:]
+                
+                if current_start is None:
+                    # Treat isolated I-tag as a start (robustness)
+                    current_start = i
+                    current_label = clean_name
+                elif current_label != clean_name:
+                    # If type changes (e.g. B-Per then I-Loc), close previous and start new
+                    entities.append([current_start, i - 1, current_label])
+                    current_start = i
+                    current_label = clean_name
+                # Else: just continue (extend span)
+                
+            else: # Tag is "O"
+                if current_start is not None:
+                    entities.append([current_start, i - 1, current_label])
+                    current_start = None
+                    current_label = None
+
+        # End of sentence: if entity is still open, close it
+        if current_start is not None:
+            entities.append([current_start, len(tokens) - 1, current_label])
+            
+        transformed_data.append({
+            "tokenized_text": tokens,
+            "ner": entities,
+            # Keeping ID if you need it, otherwise remove this line
+            "id": row.get('id', '') 
+        })
+        
+    return transformed_data
+
 def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_size=0.1):
     """
     Takes a list of NER data, performs a multi-label stratified split,
@@ -702,7 +789,7 @@ def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_
 
     return dataset_dict
 
-def analyze_annotation_data(file_path: str) -> pd.DataFrame:
+def analyze_annotation_data(file_path: str, annotator_importance = CLIRENER_ANNOTATOR_IMPORTANCE) -> pd.DataFrame:
     """
     Parses a Label Studio JSON export to count total and unique entities per type
     and collects all entity texts for Top-N analysis.
@@ -728,7 +815,7 @@ def analyze_annotation_data(file_path: str) -> pd.DataFrame:
         selected_annotations = None
         annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in CLIRENER_ANNOTATOR_IMPORTANCE:
+        for annotator_id in annotator_importance:
             if annotator_id in annotations_by_id:
                 # If the preferred annotator is found, select their annotations and stop searching
                 selected_annotations = annotations_by_id[annotator_id].get('result', [])

@@ -16,4 +16,6 @@ pip install span_marker
 
 # Kernel last
 conda install -n clirener_finetune ipykernel --update-deps --force-reinstall
+conda install matplotlib
+conda install scikit-multilearn
 ```
