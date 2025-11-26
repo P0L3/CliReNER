@@ -154,12 +154,8 @@ if __name__ == "__main__":
     dataset = load_dataset(args.dataset_id)
     
     # Extract labels (Assumes standard NER format)
-    if "ner_tags" in dataset["train"].features:
-        labels = dataset["train"].features["ner_tags"].feature.names
-    else:
-        # Fallback or custom logic if your dataset structure differs
-        labels = [] 
-        print("Warning: Could not automatically detect 'ner_tags' feature names.")
+    labels = dataset["train"].features["ner_tags"][0].names
+
 
     print(f"Labels found: {len(labels)}")
 

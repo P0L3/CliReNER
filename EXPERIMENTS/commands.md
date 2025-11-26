@@ -23,3 +23,11 @@ Command used to output statistics for CliReNER GOLD (preannotator annotations):
 ```shell
 python3 EXPERIMENTS/calculate_hf_dataset_stats.py --dataset "P0L3/CliReNER_v_1_1_28_GOLD_authorannots" --output_dir "EXPERIMENTS/DATASET_STATS"
 ```
+
+
+**finetune.py**
+
+Command used for initial experiments with model fine-tuning (GLiNER):
+```shell
+python3 -m EXPERIMENTS.finetune --model_type GLINER --dataset_id P0L3/CliReNER_v_1_1_28_SILVER --model_id gliner-community/gliner_medium-v2.5 --config_path EXPERIMENTS/gliner_config.json
+```
