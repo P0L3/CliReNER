@@ -160,7 +160,7 @@ if __name__ == "__main__":
     print(f"Labels found: {len(labels)}")
 
     # 4. Determine Output Path
-    output_dir = get_output_dir("models", args.model_type, args.model_id, args.dataset_id)
+    output_dir = get_output_dir("EXPERIMENTS/models", args.model_type, args.model_id, args.dataset_id)
     print(f"Output directory set to: {output_dir}")
 
     # 5. Run Training
