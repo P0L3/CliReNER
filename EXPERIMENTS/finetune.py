@@ -28,6 +28,8 @@ def load_config(config_path):
         return json.load(f)
 
 def train_gliner(model_id, dataset, labels, config, output_dir, device):
+    os.environ["TOKENIZERS_PARALLELISM"] = "true"
+    os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"]="python"
     from gliner import GLiNER
     from gliner.training import Trainer, TrainingArguments as GlinerArgs
     from gliner.data_processing.collator import DataCollator
