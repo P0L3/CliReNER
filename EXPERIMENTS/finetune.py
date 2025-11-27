@@ -3,6 +3,7 @@ import json
 import torch
 import re
 import os
+import wandb  
 from pathlib import Path
 from datasets import load_dataset
 from transformers import TrainingArguments
@@ -60,6 +61,7 @@ def train_gliner(model_id, dataset, labels, config, output_dir, device):
         del train_params["calculate_epochs_from_steps"]
         del train_params["target_steps"]
 
+    train_params["report_to"] = "wandb"
     # Initialize Training Arguments
     # We update output_dir explicitly to ensure uniformity
     training_args = GlinerArgs(
@@ -88,6 +90,8 @@ def train_spanmarker(model_id, dataset, labels, config, output_dir, device):
 
     model_params = config.get("model_parameters", {})
     train_params = config.get("training_parameters", {})
+    
+    train_params["report_to"] = "wandb"
     
     # Model Card Data
     dataset_name = shorten_name(dataset.builder_name if dataset.builder_name else "dataset")
@@ -136,6 +140,10 @@ if __name__ == "__main__":
     parser.add_argument("--model_id", type=str, required=True)
     parser.add_argument("--config_path", type=str, required=True, help="Path to the JSON configuration file")
     
+    parser.add_argument("--wandb_project", type=str, default="ner-finetuning", help="WandB project name")
+    parser.add_argument("--wandb_entity", type=str, default=None, help="WandB entity (username or team)")
+    parser.add_argument("--wandb_name", type=str, default=None, help="Specific name for this run")
+    
     args = parser.parse_args()
 
     # 1. Device Setup
@@ -162,9 +170,26 @@ if __name__ == "__main__":
     # 4. Determine Output Path
     output_dir = get_output_dir("EXPERIMENTS/models", args.model_type, args.model_id, args.dataset_id)
     print(f"Output directory set to: {output_dir}")
+    
+    run_name = args.wandb_name if args.wandb_name else f"{shorten_name(args.model_id)}_{shorten_name(args.dataset_id)}"
+    
+    wandb.init(
+        project=args.wandb_project,
+        entity=args.wandb_entity,
+        name=run_name,
+        # Log all configuration parameters (CLI args + JSON config)
+        config={
+            "model_type": args.model_type,
+            "dataset": args.dataset_id,
+            "base_model": args.model_id,
+            **config  # Unpack json config into wandb config
+        }
+    )
 
     # 5. Run Training
     if args.model_type == "GLINER":
         train_gliner(args.model_id, dataset, labels, config, output_dir, device)
     elif args.model_type == "SPANMARKER":
         train_spanmarker(args.model_id, dataset, labels, config, output_dir, device)
+        
+    wandb.finish()

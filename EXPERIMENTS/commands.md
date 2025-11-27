@@ -31,3 +31,8 @@ Command used for initial experiments with model fine-tuning (GLiNER):
 ```shell
 python3 -m EXPERIMENTS.finetune --model_type GLINER --dataset_id P0L3/CliReNER_v_1_1_28_SILVER --model_id gliner-community/gliner_medium-v2.5 --config_path EXPERIMENTS/gliner_config.json
 ```
+
+COmmand used when wnadb was implementetd (GLiNER):
+```shell
+python -m EXPERIMENTS.finetune --model_type GLINER --dataset_id P0L3/CliReNER_v_1_1_28_SILVER --model_id gliner-community/gliner_medium-v2.5 --config_path EXPERIMENTS/gliner_config.json --wandb_project "CLIRENER_SILVER_EXPERIMENTS" --wandb_name "GLiNER_Medium_v2.5_Run"
+```
