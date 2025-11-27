@@ -5,8 +5,8 @@ conda create -n clirener_finetune python=3.10
 conda activate clirener_finetune
 
 # GLiNER part (conda installs)
-conda install gliner accelerate seqeval datasets
-conda install pip
+conda install gliner accelerate seqeval datasets -y
+conda install pip -y
 
 # SpanMarker part (pip installs)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu126
@@ -15,10 +15,10 @@ pip install "transformers<=4.50.0"
 pip install span_marker
 
 # Kernel last
-conda install -n clirener_finetune ipykernel --update-deps --force-reinstall
-conda install matplotlib
-conda install scikit-multilearn
-conda install seqeval
-pip install wandb
-pip install nervaluate
+conda install -n clirener_finetune ipykernel --update-deps --force-reinstall -y
+conda install matplotlib -y
+conda install scikit-multilearn -y
+conda install seqeval -y
+pip install wandb 
+pip install nervaluate 
 ```
