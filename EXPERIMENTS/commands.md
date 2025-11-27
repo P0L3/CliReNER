@@ -49,6 +49,10 @@ Command used with both implemented and joined in pipiline (GLiNER): 27.11.2025.
 python -m EXPERIMENTS.run_pipeline  --model_type GLINER  --dataset_id P0L3/CliReNER_v_1_1_28_SILVER  --model_id gliner-community/gliner_medium-v2.5  --config_path EXPERIMENTS/gliner_config.json  --wandb_project "CLIRENER_SILVER_EXPERIMENTS"  --wandb_name "GLiNER_Medium_v2.5_Pipeline_Run"
 ```
 
+Command used when wandb was implemented and updated with visuals; evaluation (GLiNER): 27.11.2025.
+```shell
+python -m EXPERIMENTS.evaluate  --model_type GLINER  --dataset_id P0L3/CliReNER_v_1_1_28_SILVER  --model_path FINETUNES/GLINER/models/GLINER_med_v2_5/checkpoint-final  --wandb_project "CLIRENER_SILVER_EXPERIMENTS"
+```
 
 **finetune_evaluate_pipeline.py**
 
