@@ -10,8 +10,9 @@
 
 
 ## To Do
-- [ ] Unify GLiNER and SPANMARKER finetuning procedure.
-  - [ ] Unify data source using HF dataset (GLiNER currently work differently).
+- [x] <del>Unify GLiNER and SPANMARKER finetuning procedure.</del>
+  - [x] <del>Unify data source using HF dataset (GLiNER currently work differently).</del>
   - [ ] Add SEED option to finetuning (reproducability).
-  - [ ] Add WANDB wrapper for monitoring.
+  - [x] <del>Add WANDB wrapper for monitoring.</del>
 - [ ] Update Dataset card for CLIRENER_V_1_0_28
+- [ ] Add useful outputs for WANDB visualization
