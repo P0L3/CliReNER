@@ -6,7 +6,7 @@ import os
 import wandb  
 from pathlib import Path
 from datasets import load_dataset
-from transformers import TrainingArguments, set_seed
+from transformers import TrainingArguments, set_seed, EarlyStoppingCallback
 
 from dataset_processing import hf_dataset_to_gliner_format
 
@@ -130,6 +130,7 @@ def train_spanmarker(model_id, dataset, labels, config, output_dir, device, seed
         args=args,
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
     )
 
     trainer.train()

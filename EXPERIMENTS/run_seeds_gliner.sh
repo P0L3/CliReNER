@@ -7,7 +7,7 @@ PROJECT="CLIRENER_SILVER_SEEDS"
 BASE_NAME="GLiNER_Medium"
 
 # Loop through seeds
-for SEED in 42 123 2024
+for SEED in 0 42 3012 33 131
 do
     echo "-----------------------------------"
     echo "Running Seed $SEED"
