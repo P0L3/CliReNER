@@ -98,7 +98,8 @@ def log_to_wandb(results, results_by_tag):
     """
     import pandas as pd
     
-    # 1. Log overall metrics (Strict & Exact)
+    # 1. Log overall scalar metrics
+    # Essential for sorting/filtering runs in the main Project Dashboard list.
     wandb.log({
         "overall/strict_precision": results["strict"]["precision"],
         "overall/strict_recall": results["strict"]["recall"],
@@ -114,49 +115,35 @@ def log_to_wandb(results, results_by_tag):
         "overall/type_f1": results["ent_type"]["f1"],
     })
     
-    # 2. Log full results table (Strict, Exact, Partial, Type)
+    # 2. Log full overall results table
     df_results = pd.DataFrame(results)
     wandb.log({"tables/overall_results": wandb.Table(dataframe=df_results)})
     
-    # 3. Log Per-Tag Table (Useful for textual inspection)
+    # 3. Log Per-Tag Table
+    # This is the "Weave" data source for your custom overlays and bar charts.
     tag_data = []
-    flattened_metrics = {}
 
     for tag, metrics in results_by_tag.items():
-        # A. Prepare data for the Table
         row = {"tag": tag}
+        # Capture metrics for all evaluation modes
         for eval_type in ["strict", "exact", "partial", "ent_type"]: 
             if eval_type in metrics:
+                # Core Metrics
                 row[f"{eval_type}_f1"] = metrics[eval_type]["f1"]
                 row[f"{eval_type}_p"] = metrics[eval_type]["precision"]
                 row[f"{eval_type}_r"] = metrics[eval_type]["recall"]
+                
+                # Counts (Vital for Error Analysis plots)
                 row[f"{eval_type}_count_correct"] = metrics[eval_type].get("correct", 0)
                 row[f"{eval_type}_count_missed"] = metrics[eval_type].get("missed", 0)
+                row[f"{eval_type}_count_spurious"] = metrics[eval_type].get("spurious", 0)
+                row[f"{eval_type}_count_incorrect"] = metrics[eval_type].get("incorrect", 0)
+                
         tag_data.append(row)
-
-        # B. Prepare Flattened Scalar Metrics for Dashboard Visualization
-        # We focus on 'strict' for charts to keep it clean, but you can add 'exact' if needed.
-        if 'strict' in metrics:
-            clean_tag = tag.replace(" ", "_") # Sanitize tag for wandb key
-            
-            # Key Metrics
-            flattened_metrics[f"tag_f1/{clean_tag}"] = metrics['strict']['f1']
-            flattened_metrics[f"tag_precision/{clean_tag}"] = metrics['strict']['precision']
-            flattened_metrics[f"tag_recall/{clean_tag}"] = metrics['strict']['recall']
-            
-            # Error Counts (Great for Stacked Bar Charts in Dashboard)
-            flattened_metrics[f"tag_correct/{clean_tag}"] = metrics['strict'].get("correct", 0)
-            flattened_metrics[f"tag_incorrect/{clean_tag}"] = metrics['strict'].get("incorrect", 0)
-            flattened_metrics[f"tag_missed/{clean_tag}"] = metrics['strict'].get("missed", 0)
-            flattened_metrics[f"tag_spurious/{clean_tag}"] = metrics['strict'].get("spurious", 0)
         
     if tag_data:
         df_tags = pd.DataFrame(tag_data)
         wandb.log({"tables/per_tag_results": wandb.Table(dataframe=df_tags)})
-
-    # 4. Log the Flattened Metrics
-    # This enables "Group By" and "Compare" features in the WandB UI
-    wandb.log(flattened_metrics)
     
     print("\n--- Results Logged to WandB ---")
     print(df_results)
