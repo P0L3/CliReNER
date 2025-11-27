@@ -19,4 +19,6 @@ conda install -n clirener_finetune ipykernel --update-deps --force-reinstall
 conda install matplotlib
 conda install scikit-multilearn
 conda install seqeval
+pip install wandb
+pip install nervaluate
 ```

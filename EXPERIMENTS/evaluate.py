@@ -5,7 +5,7 @@ import pandas as pd
 import wandb
 from datasets import load_dataset
 from nervaluate import Evaluator
-from dataset_processing import transform_to_ner_format
+from dataset_processing import transform_to_ner_format, CLIRENER_LABELS_V1
 
 # Import model specifics
 from gliner import GLiNER
@@ -146,6 +146,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_entity", type=str, default=None, help="WandB username/org")
     parser.add_argument("--wandb_run_name", type=str, default=None, help="Optional name for the run")
 
+    parser.add_argument("--wandb_run_id", type=str, required=True, help="WandB Run ID to resume")
     args = parser.parse_args()
 
     # 1. Device Setup
@@ -161,6 +162,8 @@ if __name__ == "__main__":
         project=args.wandb_project,
         entity=args.wandb_entity,
         name=args.wandb_run_name if args.wandb_run_name else f"eval-{args.model_type}-{args.dataset_id.split('/')[-1]}",
+        id=args.wandb_run_id,  # <--- USE PASSED ID
+        resume="must", 
         config=vars(args)
     )
 
@@ -170,8 +173,9 @@ if __name__ == "__main__":
     
     # Extract labels (ground truth schema)
     # Assumes "ner_tags" features exist as per your training script
-    label_list = dataset["train"].features["ner_tags"].feature.names
-    
+    BIO_label_list = dataset["train"].features["ner_tags"].feature.names
+    label_list = list(CLIRENER_LABELS_V1)
+
     # Ground Truth IDs
     true_ids = dataset["test"]["ner_tags"]
 
@@ -187,14 +191,14 @@ if __name__ == "__main__":
     # This transforms the "entities" dicts back into aligned BIO/ID sequences
     print("--- Transforming Predictions to format ---")
     model_predictions_transformed = transform_to_ner_format(raw_predictions, label_list)
-
+    
     pred_ids = []
     for row in model_predictions_transformed[0]:
         pred_ids.append(row["ner_tags"])
 
     # 6. Evaluate
     # Use the labels found in dataset as the tags for nervaluate
-    results, results_by_tag = run_nervaluate(true_ids, pred_ids, label_list, tags=label_list)
+    results, results_by_tag = run_nervaluate(true_ids, pred_ids, BIO_label_list, tags=label_list)
 
     # 7. Log
     log_to_wandb(results, results_by_tag)

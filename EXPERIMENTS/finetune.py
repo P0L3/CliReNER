@@ -82,7 +82,7 @@ def train_gliner(model_id, dataset, labels, config, output_dir, device):
     # Save final model explicitly in the unified format
     model.save_pretrained(output_dir / "checkpoint-final")
 
-def train_spanmarker(model_id, dataset, labels, config, output_dir, device):
+def train_spanmarker(model_id, dataset, labels, config, output_dir, device, dataset_name="dataset"):
     from span_marker import SpanMarkerModel, Trainer, SpanMarkerModelCardData
     from transformers import AutoConfig
 
@@ -94,7 +94,7 @@ def train_spanmarker(model_id, dataset, labels, config, output_dir, device):
     train_params["report_to"] = "wandb"
     
     # Model Card Data
-    dataset_name = shorten_name(dataset.builder_name if dataset.builder_name else "dataset")
+    
     card_data = SpanMarkerModelCardData(
         model_id=f"{shorten_name(model_id)}-{dataset_name}",
         encoder_id=model_id,
@@ -144,6 +144,8 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_entity", type=str, default=None, help="WandB entity (username or team)")
     parser.add_argument("--wandb_name", type=str, default=None, help="Specific name for this run")
     
+    parser.add_argument("--wandb_run_id", type=str, default=None, help="WandB Run ID to force")
+
     args = parser.parse_args()
 
     # 1. Device Setup
@@ -162,7 +164,8 @@ if __name__ == "__main__":
     dataset = load_dataset(args.dataset_id)
     
     # Extract labels (Assumes standard NER format)
-    labels = dataset["train"].features["ner_tags"][0].names
+    # labels = dataset["train"].features["ner_tags"][0].names
+    labels = dataset["train"].features["ner_tags"].feature.names
 
 
     print(f"Labels found: {len(labels)}")
@@ -173,10 +176,14 @@ if __name__ == "__main__":
     
     run_name = args.wandb_name if args.wandb_name else f"{shorten_name(args.model_id)}_{shorten_name(args.dataset_id)}"
     
-    wandb.init(
+    wandb_id = args.wandb_run_id if args.wandb_run_id else wandb.util.generate_id()
+
+    run = wandb.init(
         project=args.wandb_project,
         entity=args.wandb_entity,
         name=run_name,
+        id = wandb_id,
+        resume="allow",
         # Log all configuration parameters (CLI args + JSON config)
         config={
             "model_type": args.model_type,
@@ -190,6 +197,29 @@ if __name__ == "__main__":
     if args.model_type == "GLINER":
         train_gliner(args.model_id, dataset, labels, config, output_dir, device)
     elif args.model_type == "SPANMARKER":
-        train_spanmarker(args.model_id, dataset, labels, config, output_dir, device)
+        train_spanmarker(args.model_id, dataset, labels, config, output_dir, device, dataset_name=shorten_name(args.dataset_id))
         
     wandb.finish()
+
+    print("\n" + "="*80)
+    print("TRAINING COMPLETE.")
+    print("To run evaluation manually (logging to the SAME WandB run), use this command:")
+    print("="*80)
+
+    # Construct the command dynamically
+    eval_cmd = [
+        "python", "-m", "EXPERIMENTS.evaluate",
+        "--model_type", args.model_type,
+        "--dataset_id", args.dataset_id,
+        "--model_path", str(output_dir / "checkpoint-final"),
+        "--wandb_project", args.wandb_project,
+        "--wandb_run_id", run.id  # Crucial: uses the actual ID of the finished run
+    ]
+
+    # Add entity only if it was provided
+    if args.wandb_entity:
+        eval_cmd.extend(["--wandb_entity", args.wandb_entity])
+
+    # Print as a copy-pasteable string
+    print(" ".join(eval_cmd))
+    print("="*80 + "\n")
