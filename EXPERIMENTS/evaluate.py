@@ -144,70 +144,12 @@ def log_to_wandb(results, results_by_tag):
     if tag_data:
         df_tags = pd.DataFrame(tag_data)
         wandb.log({"tables/per_tag_results": wandb.Table(dataframe=df_tags)})
+        
     
     print("\n--- Results Logged to WandB ---")
     print(df_results)
 
-def log_ner_visualizations(results_by_tag):
-    """
-    Generates rich visualizations for NER evaluation.
-    1. Per-Tag F1 Score (Bar Chart)
-    2. Error Breakdown Counts (Grouped Bar Chart)
-    """
-    import pandas as pd
-    
-    # --- Prepare Data ---
-    f1_data = []
-    error_data = []
-    
-    # Iterate through each tag (e.g., 'Person', 'Location')
-    for tag, metrics in results_by_tag.items():
-        # 1. Extract F1 data (using 'strict' mode usually is best for comparison)
-        if 'strict' in metrics:
-            f1_data.append([tag, metrics['strict']['f1']])
-            
-        # 2. Extract Error Counts (using 'strict' counts)
-        # We focus on: correct, incorrect, missed, spurious
-        if 'strict' in metrics:
-            m = metrics['strict']
-            error_data.append([tag, "Correct", m.get("correct", 0)])
-            error_data.append([tag, "Incorrect", m.get("incorrect", 0)])
-            error_data.append([tag, "Missed", m.get("missed", 0)])
-            error_data.append([tag, "Spurious", m.get("spurious", 0)])
 
-    # --- Visualization 1: F1 Score per Tag ---
-    # Convert to Table
-    table_f1 = wandb.Table(data=f1_data, columns=["Entity", "Strict F1"])
-    
-    # Create Bar Plot
-    # We sort by F1 score for readability
-    f1_data.sort(key=lambda x: x[1], reverse=True)
-    bar_plot_f1 = wandb.plot.bar(
-        table_f1, "Entity", "Strict F1", 
-        title="Strict F1 Score by Entity Type"
-    )
-    
-    wandb.log({"chart_f1_per_tag": bar_plot_f1})
-
-    # --- Visualization 2: Error Analysis (Grouped Bar Chart) ---
-    # This helps diagnose: Are we missing entities? Or predicting wrong labels?
-    df_errors = pd.DataFrame(error_data, columns=["Entity", "ErrorType", "Count"])
-    
-    # We use a custom Vega-Lite chart for grouped bars as it's cleaner in WandB
-    # However, a simple approach is logging the table and using WandB's custom chart builder.
-    # Here is a code-based chart generation:
-    
-    table_errors = wandb.Table(dataframe=df_errors)
-    
-    # This creates a grouped bar chart
-    wandb.log({
-        "chart_error_breakdown": wandb.plot.bar(
-            table_errors, "Entity", "Count", split="ErrorType",
-            title="Error Breakdown per Entity (Correct vs Errors)"
-        )
-    })
-    
-    print("--- Visualizations Logged to WandB ---")
 
 
 if __name__ == "__main__":

@@ -4,12 +4,10 @@ import sys
 import re
 import wandb # <--- NEEDED to generate the ID
 from pathlib import Path
-from EXPERIMENTS.finetune import shorten_name
+from EXPERIMENTS.finetune import shorten_name, get_output_dir
 
-def get_expected_model_path(base_dir, model_type, model_id, dataset_id):
-    m_name = shorten_name(model_id)
-    d_name = shorten_name(dataset_id)
-    return Path(base_dir) / model_type / f"{m_name}_{d_name}" / "checkpoint-final"
+def get_expected_model_path(base_dir, model_type, model_id, dataset_id, seed=None):
+    return Path(get_output_dir(base_dir, model_type, model_id, dataset_id, seed) / "checkpoint-final")
 
 def run_command(command, description):
     print(f"\n{'='*10} Starting {description} {'='*10}")
@@ -30,6 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_project", type=str, required=True)
     parser.add_argument("--wandb_name", type=str, required=True)
     parser.add_argument("--wandb_entity", type=str, default=None)
+    parser.add_argument("--seed", type=int, default=42, help="Random seed")
     
     args = parser.parse_args()
 
@@ -37,6 +36,8 @@ if __name__ == "__main__":
     run_id = wandb.util.generate_id()
     print(f"--- Generated WandB Run ID: {run_id} ---")
 
+    run_name_with_seed = f"{args.wandb_name}_seed{args.seed}"
+    
     # 2. Training
     train_cmd = [
         sys.executable, "-m", "EXPERIMENTS.finetune",
@@ -45,8 +46,9 @@ if __name__ == "__main__":
         "--model_id", args.model_id,
         "--config_path", args.config_path,
         "--wandb_project", args.wandb_project,
-        "--wandb_name", args.wandb_name,
-        "--wandb_run_id", run_id  # <--- PASSING THE ID
+        "--wandb_name", run_name_with_seed,
+        "--wandb_run_id", run_id,
+        "--seed", str(args.seed)
     ]
     if args.wandb_entity:
         train_cmd.extend(["--wandb_entity", args.wandb_entity])
@@ -54,7 +56,7 @@ if __name__ == "__main__":
     run_command(train_cmd, "TRAINING")
 
     # 3. Path Calculation
-    saved_model_path = get_expected_model_path("EXPERIMENTS/models", args.model_type, args.model_id, args.dataset_id)
+    saved_model_path = get_expected_model_path("EXPERIMENTS/models", args.model_type, args.model_id, args.dataset_id, args.seed)
     
     if not saved_model_path.exists():
         print(f"Error: Expected model path does not exist: {saved_model_path}")
@@ -67,6 +69,7 @@ if __name__ == "__main__":
         "--dataset_id", args.dataset_id,
         "--model_path", str(saved_model_path),
         "--wandb_project", args.wandb_project,
+        "--wandb_run_name", run_name_with_seed,
         "--wandb_run_id", run_id  # <--- PASSING THE SAME ID
     ]
     if args.wandb_entity:

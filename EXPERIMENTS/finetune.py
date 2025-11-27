@@ -6,7 +6,7 @@ import os
 import wandb  
 from pathlib import Path
 from datasets import load_dataset
-from transformers import TrainingArguments
+from transformers import TrainingArguments, set_seed
 
 from dataset_processing import hf_dataset_to_gliner_format
 
@@ -18,17 +18,20 @@ def shorten_name(name):
     name = re.sub(r"_+", "_", name)
     return name.strip("_")
 
-def get_output_dir(base_dir, model_type, model_id, dataset_id):
+def get_output_dir(base_dir, model_type, model_id, dataset_id, seed=None):
     """Unified naming convention: models/TYPE/ModelName_DatasetName"""
     m_name = shorten_name(model_id)
     d_name = shorten_name(dataset_id)
-    return Path(base_dir) / model_type / f"{m_name}_{d_name}"
+    folder_name = f"{m_name}_{d_name}"
+    if seed is not None:
+        folder_name += f"_s{seed}" # Separate folder per seed
+    return Path(base_dir) / model_type / folder_name
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
         return json.load(f)
 
-def train_gliner(model_id, dataset, labels, config, output_dir, device):
+def train_gliner(model_id, dataset, labels, config, output_dir, device, seed):
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"]="python"
     from gliner import GLiNER
@@ -62,6 +65,7 @@ def train_gliner(model_id, dataset, labels, config, output_dir, device):
         del train_params["target_steps"]
 
     train_params["report_to"] = "wandb"
+    train_params["seed"] = seed 
     # Initialize Training Arguments
     # We update output_dir explicitly to ensure uniformity
     training_args = GlinerArgs(
@@ -82,7 +86,7 @@ def train_gliner(model_id, dataset, labels, config, output_dir, device):
     # Save final model explicitly in the unified format
     model.save_pretrained(output_dir / "checkpoint-final")
 
-def train_spanmarker(model_id, dataset, labels, config, output_dir, device, dataset_name="dataset"):
+def train_spanmarker(model_id, dataset, labels, config, output_dir, device, seed, dataset_name="dataset"):
     from span_marker import SpanMarkerModel, Trainer, SpanMarkerModelCardData
     from transformers import AutoConfig
 
@@ -92,7 +96,7 @@ def train_spanmarker(model_id, dataset, labels, config, output_dir, device, data
     train_params = config.get("training_parameters", {})
     
     train_params["report_to"] = "wandb"
-    
+    train_params["seed"] = seed 
     # Model Card Data
     
     card_data = SpanMarkerModelCardData(
@@ -145,8 +149,12 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_name", type=str, default=None, help="Specific name for this run")
     
     parser.add_argument("--wandb_run_id", type=str, default=None, help="WandB Run ID to force")
+    
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
 
     args = parser.parse_args()
+    
+    set_seed(args.seed)
 
     # 1. Device Setup
     if torch.cuda.is_available():
@@ -171,7 +179,7 @@ if __name__ == "__main__":
     print(f"Labels found: {len(labels)}")
 
     # 4. Determine Output Path
-    output_dir = get_output_dir("EXPERIMENTS/models", args.model_type, args.model_id, args.dataset_id)
+    output_dir = get_output_dir("EXPERIMENTS/models", args.model_type, args.model_id, args.dataset_id, args.seed)
     print(f"Output directory set to: {output_dir}")
     
     run_name = args.wandb_name if args.wandb_name else f"{shorten_name(args.model_id)}_{shorten_name(args.dataset_id)}"
@@ -189,15 +197,16 @@ if __name__ == "__main__":
             "model_type": args.model_type,
             "dataset": args.dataset_id,
             "base_model": args.model_id,
+            "seed": args.seed,
             **config  # Unpack json config into wandb config
         }
     )
 
     # 5. Run Training
     if args.model_type == "GLINER":
-        train_gliner(args.model_id, dataset, labels, config, output_dir, device)
+        train_gliner(args.model_id, dataset, labels, config, output_dir, device, seed=args.seed)
     elif args.model_type == "SPANMARKER":
-        train_spanmarker(args.model_id, dataset, labels, config, output_dir, device, dataset_name=shorten_name(args.dataset_id))
+        train_spanmarker(args.model_id, dataset, labels, config, output_dir, device, seed=args.seed, dataset_name=shorten_name(args.dataset_id))
         
     wandb.finish()
 
@@ -213,6 +222,7 @@ if __name__ == "__main__":
         "--dataset_id", args.dataset_id,
         "--model_path", str(output_dir / "checkpoint-final"),
         "--wandb_project", args.wandb_project,
+        "--wandb_run_name", run_name,
         "--wandb_run_id", run.id  # Crucial: uses the actual ID of the finished run
     ]
 
