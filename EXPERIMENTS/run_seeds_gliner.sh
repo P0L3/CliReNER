@@ -13,7 +13,7 @@ do
     echo "Running Seed $SEED"
     echo "-----------------------------------"
     
-    python -m EXPERIMENTS.run_pipeline \
+    python -m EXPERIMENTS.finetune_evaluate_pipeline \
       --model_type GLINER \
       --dataset_id $DATA \
       --model_id $MODEL \
