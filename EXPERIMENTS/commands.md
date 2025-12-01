@@ -60,3 +60,11 @@ Command used with both implemented and joined in pipiline (SPANMARKER): 27.11.20
 ```shell
 python -m EXPERIMENTS.finetune_evaluate_pipeline  --model_type SPANMARKER  --dataset_id P0L3/CliReNER_v_1_1_28_SILVER  --model_id P0L3/clirebert_clirevocab_uncased  --config_path EXPERIMENTS/spanmarker_config.json  --wandb_project "CLIRENER_SILVER_EXPERIMENTS"  --wandb_name "SpanMarker_CliReBert_Pipeline_Run"
 ```
+
+
+**gold_evaluate.py**
+
+Command used to run evaluation on GOLD dataset with only author annotations:
+```shell
+python -m EXPERIMENTS.evaluate_gold_campaign
+```
