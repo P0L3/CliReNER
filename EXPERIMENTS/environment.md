@@ -21,4 +21,5 @@ conda install scikit-multilearn -y
 conda install seqeval -y
 pip install wandb 
 pip install nervaluate 
+pip install multiset-multicover
 ```

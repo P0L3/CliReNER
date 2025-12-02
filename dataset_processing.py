@@ -28,7 +28,7 @@ import datasets
 from sklearn.preprocessing import MultiLabelBinarizer
 from skmultilearn.model_selection import iterative_train_test_split
 
-
+import uuid
 
 # ---------------- DATA CONFIGS
 IBMCCNER_DIR = "ibm-research/Climate-Change-NER"
@@ -855,3 +855,43 @@ def analyze_annotation_data(file_path: str, annotator_importance = CLIRENER_ANNO
     df = pd.DataFrame(analysis_data)
     # The second return value is the new dictionary of entity texts
     return df, all_entity_texts
+
+
+def convert_to_labelstudio_format(data, paper_id, model_version="gliner-community/gliner_medium-v2.5"):
+    if not isinstance(data, list):
+        raise TypeError("Expected data to be a list of dictionaries, but got: {}".format(type(data)))
+    
+    labelstudio_data = []
+    
+    for item in data:
+        if not isinstance(item, dict) or "entities" not in item:
+            continue
+        
+        predictions = {
+            "model_version": model_version,
+            "score": 0.5,  # Default score for the overall prediction
+            "result": []
+        }
+        
+        for entity in item.get("entities", []):
+            if not isinstance(entity, dict):
+                continue
+            
+            predictions["result"].append({
+                "id": str(uuid.uuid4())[:8],
+                "from_name": "label",
+                "to_name": "text",
+                "type": "labels",
+                "value": {
+                    "start": entity.get("start", 0),
+                    "end": entity.get("end", 0),
+                    "score": entity.get("score", 0.0),
+                    "text": entity.get("text", ""),
+                    "labels": [entity.get("label", "Unknown")]
+                }
+            })
+        
+        item["paper_id"] = paper_id
+        labelstudio_data.append({"data": item, "predictions": [predictions]})
+    
+    return labelstudio_data
