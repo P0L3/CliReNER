@@ -22,4 +22,6 @@ conda install seqeval -y
 pip install wandb 
 pip install nervaluate 
 pip install multiset-multicover
+
+pip install spacy==3.7.5
 ```
