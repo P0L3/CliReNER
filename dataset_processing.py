@@ -46,6 +46,13 @@ BIODIVNER_LABELS = {
     'Matter', 'Location', 'Environment'
 }
 
+CLIMATEIE_LABELS = {
+    'variable', 'project', 'location',
+    'model', 'provider', 'instrument',
+    'event', 'weather event', 'natural hazard',
+    'ocean circulation', 'teleconnection'
+}
+
 CLIRENER_DIR = "C:\\Users\\ANDRIJA_RAD\\CWED4ETA\\CWED4ETA\\DATA\\CWED4ETA\\project-6-at-2025-10-15-07-02-c3e9e3bf.json" # PC2 
 # "/home/p0l3/RAD/CWED4ETA/CWED4ETA/CWED4ETA/DATA/CWED4ETA/project-6-at-2025-10-15-07-27-c3e9e3bf.json"
 CLIRENER_LABELS_V0 = {
