@@ -68,3 +68,9 @@ Command used to run evaluation on GOLD dataset with only author annotations:
 ```shell
 python -m EXPERIMENTS.gold_evaluate
 ```
+
+**zeroshot_evaluate.py**
+Command used to evaluate GLiNER with no fine-tuning:
+```shell
+python -m EXPERIMENTS.zeroshot_evaluate
+```
