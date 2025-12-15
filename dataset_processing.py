@@ -902,3 +902,61 @@ def convert_to_labelstudio_format(data, paper_id, model_version="gliner-communit
         labelstudio_data.append({"data": item, "predictions": [predictions]})
     
     return labelstudio_data
+
+
+def process_llm_jsonl_results(file_path):
+    """
+    Transforms the JSONL output from the LLM NER script into the 
+    standardized dataset format used by cwed4eta_process_json_file.
+    """
+    dataset = []
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Parse the JSON line (representing one task/sentence)
+                task = json.loads(line)
+                
+                # In our JSONL, compound_id and input_text were stored at top level
+                text = task.get("input_text", "")
+                compound_id = task.get("compound_id", "unknown-id")
+                
+                # The entities were stored in 'processed_entities' key
+                # We map them to your standardized format: text, label, start, end
+                entities = []
+                for ent in task.get("processed_entities", []):
+                    # We only add if we have valid span indices
+                    if "span" in ent:
+                        entities.append({
+                            "text": ent["entity_text"],
+                            "label": ent["category"],
+                            "start": ent["span"][0],
+                            "end": ent["span"][1],
+                            # Optional: include reasoning for debugging/analysis
+                            "reasoning": ent.get("reasoning", "") 
+                        })
+                
+                # Append to final list in the format your pipeline expects
+                dataset.append({
+                    "text": text,
+                    "entities": entities,
+                    "id": compound_id
+                })
+                
+    except FileNotFoundError:
+        print(f"Error: File {file_path} not found.")
+    except Exception as e:
+        print(f"An error occurred during processing: {e}")
+        
+    return dataset
+
+def shorten_name(name):
+    """Transforms a Hugging Face ID into a clean, filename-safe string."""
+    name = name.split("/")[-1]
+    name = re.sub(r"[^a-zA-Z0-9]", "_", name)
+    name = re.sub(r"_+", "_", name)
+    return name.strip("_")
