@@ -921,6 +921,9 @@ def process_llm_jsonl_results(file_path):
                 # Parse the JSON line (representing one task/sentence)
                 task = json.loads(line)
                 
+                if task.get("raw_llm_response") is None:
+                    continue
+                
                 # In our JSONL, compound_id and input_text were stored at top level
                 text = task.get("input_text", "")
                 compound_id = task.get("compound_id", "unknown-id")
