@@ -18,7 +18,7 @@ from EXPERIMENTS.evaluate import (
 GOLD_DATASET_ID = "P0L3/CliReNER_v_1_1_28_GOLD_authorannots"
 
 # 2. WandB Project (Suggested to keep separate from fine-tuned runs)
-WANDB_PROJECT = "CLIRENER_GOLD_ZEROSHOT"
+WANDB_PROJECT = "CLIRENER_GOLD_SEEDS_authorannots"
 
 # 3. Base GLiNER models to fetch from Hugging Face Hub
 MODELS_TO_EVALUATE = [
@@ -59,7 +59,7 @@ def run_zeroshot_eval():
         print(f"\n{'#'*60}")
         print(f"Processing Zero-Shot: {model_id}")
         
-        run_name = f"eval_GOLD_ZEROSHOT_{shorten_name(model_id)}"
+        run_name = f"eval_GOLD_ZS_{shorten_name(model_id)}"
         
         # Initialize WandB
         run = wandb.init(
