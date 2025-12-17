@@ -68,7 +68,7 @@ def run_zeroshot_eval():
             reinit=True,
             config={
                 "model_type": "GLINER",
-                "model_id": model_id,
+                "model_id": model_id+"zs",
                 "training_type": "ZERO_SHOT", 
                 "evaluation_dataset": GOLD_DATASET_ID,
                 "evaluation_scope": "ALL_SPLITS_MERGED"
