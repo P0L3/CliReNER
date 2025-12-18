@@ -74,3 +74,10 @@ Command used to evaluate GLiNER with no fine-tuning:
 ```shell
 python -m EXPERIMENTS.zeroshot_evaluate
 ```
+
+
+**run_seeds_(gliner|spanmarker).sh**
+Command used to run full training and evaluation script on Windows PC1 and/or PC2:
+```
+"C:\Program Files\Git\bin\sh.exe" ./EXPERIMENTS/run_seeds_spanmarker.sh  
+```
