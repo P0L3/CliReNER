@@ -934,9 +934,12 @@ def process_llm_jsonl_results(file_path):
                 for ent in task.get("processed_entities", []):
                     # We only add if we have valid span indices
                     if "span" in ent:
+                        temp_label = ent["category"]
+                        if temp_label == "Policy or Objective":
+                            temp_label = "Policy"
                         entities.append({
                             "text": ent["entity_text"],
-                            "label": ent["category"],
+                            "label": temp_label,
                             "start": ent["span"][0],
                             "end": ent["span"][1],
                             # Optional: include reasoning for debugging/analysis
