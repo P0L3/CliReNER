@@ -52,6 +52,12 @@ Below is an overview of the key directories and scripts in the project:
 ├── PLOTS/                      # Visualization outputs (Annotation agreement, Dataset overlaps)
 ├── RESULTS/                    # Raw JSON results from model inferences
 ├── GUIDELINES/                 # Annotation guidelines (PDF)
+├── annotator_stats.ipynb       # Analysis of inter-annotator agreement and errors
+├── definitions.txt                     # Label definitions for prompts and reference
+├── llm_fewshot_prompting.ipynb         # LLM zero/few-shot inference pipeline
+├── llm_fewshot_processresults.ipynb    # LLM results evaluation & WandB logging
+├── other_ner_datasets_comparison.ipynb # Schema mapping and dataset comparison
+├── preprocess_other_ner_datasets.ipynb # Preprocessing external datasets (BioDiv, etc.)
 ├── *.ipynb                     # Jupyter notebooks for data exploration and pre-processing
 └── README.md
 ```
@@ -61,17 +67,36 @@ Below is an overview of the key directories and scripts in the project:
 This pipeline covers the lifecycle of data from raw text to HuggingFace dataset.
 
 1.  **Data Selection:**
-    *   Use [`ed4re_50_papers_sample.ipynb`](ed4re_50_papers_sample.ipynb) to explore the `ed4re` corpus and select representative journal articles for annotation.
+    *   Internal Data: Use [`ed4re_50_papers_sample.ipynb`](ed4re_50_papers_sample.ipynb) to explore the `ed4re` corpus and select representative journal articles for annotation.
+    *   External Data: Use [`preprocess_other_ner_datasets.ipynb`](preprocess_other_ner_datasets.ipynb) to preprocess external NER datasets (BioDivNER, IBM Climate Change NER, ClimateIE). This script unifies them into a sentence-level character-span format, converts BIO tags, and exports JSONs ready for Label Studio.
 2.  **Zero-Shot Pre-annotation:**
     *   Run [`gliner_try.ipynb`](gliner_try.ipynb) to generate initial entity suggestions using the GLiNER model.
 3.  **Label Studio Conversion:**
     *   Use [`gliner_results2labelstudio.ipynb`](gliner_results2labelstudio.ipynb) to convert GLiNER results into Label Studio format.
     *   *Note:* This merges existing annotations and creates ready-to-import tasks, filtering based on label occurrence requirements.
 4.  **Analysis & Export:**
-    *   Analyze annotation quality and agreement using [`labelstudio_annots_analysis.ipynb`](labelstudio_annots_analysis.ipynb). Output examples are available in [`PLOTS/ANNOTATION/`](PLOTS/ANNOTATION/).
-    *   Finally, use [`labelstudio_parsing.ipynb`](labelstudio_parsing.ipynb) to parse the final Label Studio export, create a HuggingFace dataset, and push it to the Hub (privacy settings are handled manually).
+    *   **Inter-Annotator Agreement:** Use [`annotator_stats.ipynb`](annotator_stats.ipynb) to measure agreement. It computes Krippendorff’s alpha, aligns documents by ID, and generates confusion matrices/heatmaps to analyze label disagreements.
+    *   **Schema Comparison:** Use [`other_ner_datasets_comparison.ipynb`](other_ner_datasets_comparison.ipynb) to compare external NER dataset labels against the CliReNER schema. This creates heatmaps highlighting how entities from other datasets map onto our custom definitions.
+    *   **General Stats:** Analyze annotation quality using [`labelstudio_annots_analysis.ipynb`](labelstudio_annots_analysis.ipynb). Output examples are available in [`PLOTS/ANNOTATION/`](PLOTS/ANNOTATION/).
+    *   **Final Export:** Use [`labelstudio_parsing.ipynb`](labelstudio_parsing.ipynb) to parse the final Label Studio export, create a HuggingFace dataset, and push it to the Hub.
 
-## 2. Experimentation Framework
+## 2. LLM Benchmarking Pipeline
+
+This section covers experiments using Large Language Models (Gemini, OpenAI, DeepSeek, Claude) for Zero-Shot and Few-Shot NER.
+
+1.  **Definitions:** Refer to [`definitions.txt`](definitions.txt) for the comprehensive list of CliReNER labels and their definitions used in system prompts.
+2.  **Inference:** Run [`llm_fewshot_prompting.ipynb`](llm_fewshot_prompting.ipynb). This script:
+    *   Injects `definitions.txt` into a shared system prompt.
+    *   Queries models with rate limiting and resume support.
+    *   Parses structured JSON responses into aligned text spans.
+    *   Saves incremental results in JSONL format.
+3.  **Evaluation:** Run [`llm_fewshot_processresults.ipynb`](llm_fewshot_processresults.ipynb) to evaluate predictions against the gold standard. This script:
+    *   Transforms JSONL outputs into BIO-tag format.
+    *   Aligns predictions with gold annotations by exact sentence text.
+    *   Scores results using standard NER metrics.
+    *   Logs performance to **Weights & Biases**.
+
+## 3. Experimentation Framework
 
 This section details how to create Silver/Gold datasets, fine-tune models, and evaluate performance.
 
