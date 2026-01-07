@@ -126,3 +126,5 @@ We support fine-tuning for both [GLiNER](https://github.com/urchade/GLiNER) and 
 - [x] ~~Add useful outputs for WANDB visualization~~
 - [ ] Update Dataset card for `CLIRENER_V_1_0_28`
 - [ ] Correct experiment configs for SILVER experiment
+- [ ] Extend [`annotator_stats`](annotator_stats.ipynb) with multi-annotator agreement calculations.
+- [ ] Create auto script reporting based on [`annotator_stats`](annotator_stats.ipynb).
