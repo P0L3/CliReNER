@@ -331,12 +331,13 @@ def convert_to_token_spans(structured_docs_with_char_spans):
         if "id" in doc:
             final_data.append({
                 "id": id,
+                "text": text,
                 "tokenized_text": new_tokens,
                 "ner": doc_entities_token_spans
             })
         else:
             final_data.append({
-                # "text": text,
+                "text": text,
                 "tokenized_text": new_tokens,
                 "ner": doc_entities_token_spans
             })
