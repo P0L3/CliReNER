@@ -224,19 +224,25 @@ def cwed4eta_process_json_file(file_path = CLIRENER_DIR, annotator_importance = 
     
     dataset = []
     for task in json_string:
-        if not task.get('annotations'):
-            continue
-        selected_annotations = None
-        annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in annotator_importance:
-            if annotator_id in annotations_by_id:
-                # If the preferred annotator is found, select their annotations and stop searching
-                selected_annotations = annotations_by_id[annotator_id].get('result', [])
-                break
+        if type(annotator_importance) != type(CLIRENER_ANNOTATOR_IMPORTANCE):
+            predictions = task.get('predictions')
+            selected_annotations = [p.get('result') for p in predictions][0]
+        else:
+            if not task.get('annotations'):
+                continue
+            selected_annotations = None
+            annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
+            
+            for annotator_id in annotator_importance:
+                if annotator_id in annotations_by_id:
+                    # If the preferred annotator is found, select their annotations and stop searching
+                    selected_annotations = annotations_by_id[annotator_id].get('result', [])
+                    break
 
-        if selected_annotations is None:
-            continue
+            if selected_annotations is None:
+                continue
+        
             
         text = task["data"]["sentence"]
         
