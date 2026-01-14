@@ -825,20 +825,25 @@ def analyze_annotation_data(file_path: str, annotator_importance = CLIRENER_ANNO
         data = json.load(f)
 
     for task in data:
-        if not task.get('annotations'):
-            continue
-            
-        selected_annotations = None
-        annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in annotator_importance:
-            if annotator_id in annotations_by_id:
-                # If the preferred annotator is found, select their annotations and stop searching
-                selected_annotations = annotations_by_id[annotator_id].get('result', [])
-                break
+        if type(annotator_importance) != type(CLIRENER_ANNOTATOR_IMPORTANCE):
+            predictions = task.get('predictions')
+            selected_annotations = [p.get('result') for p in predictions][0]
+        else:
+            if not task.get('annotations'):
+                continue
+                
+            selected_annotations = None
+            annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
+            
+            for annotator_id in annotator_importance:
+                if annotator_id in annotations_by_id:
+                    # If the preferred annotator is found, select their annotations and stop searching
+                    selected_annotations = annotations_by_id[annotator_id].get('result', [])
+                    break
 
-        if selected_annotations is None:
-            continue    
+            if selected_annotations is None:
+                continue    
         
         for annotation in selected_annotations:
             if annotation.get('type') != 'labels':
