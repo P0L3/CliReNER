@@ -106,7 +106,7 @@ def process_dataset_split(dataset_split, label_names):
 
 def plot_class_distribution(class_counts, split_name, hf_name, safe_hf_name, output_dir):
     """
-    Generates and saves a histogram of class distribution.
+    Generates and saves a standard bar chart (Vertical Bars) with angled X-labels.
     """
     if not class_counts:
         return
@@ -119,19 +119,30 @@ def plot_class_distribution(class_counts, split_name, hf_name, safe_hf_name, out
 
     # Plotting
     plt.figure(figsize=(12, 6)) 
-    bars = plt.bar(df.index, df['Count'], color='skyblue', edgecolor='black')
     
-    plt.title(f"Class Distribution - {split_name.upper()}\n({hf_name})")
-    plt.xlabel("Entity Type")
-    plt.ylabel("Count")
-    plt.xticks(rotation=90) 
+    # Standard Vertical Bars
+    bars = plt.bar(df.index, df['Count'], color='#e05206', edgecolor='black')
+    
+    # INFO
+    # plt.title(f"Class Distribution - {split_name.upper()}\n({hf_name})")
+    # plt.xlabel("Entity Type")
+    # plt.ylabel("Count")
+    
+    # rotation=45: Angles the text
+    # ha='right': Aligns the end of the text to the tick mark (prevents centering issues)
+    plt.xticks(rotation=45, ha='right') 
+    
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     
     # Add numbers on top of bars
     for bar in bars:
         yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2, yval, int(yval), 
-                 va='bottom', ha='center', fontsize=8, rotation=90)
+        plt.text(bar.get_x() + bar.get_width()/2, 
+                 yval, 
+                 int(yval), 
+                 va='bottom', 
+                 ha='center', 
+                 fontsize=9) # Removed rotation on the count number for better readability
 
     plt.tight_layout()
     
@@ -139,7 +150,7 @@ def plot_class_distribution(class_counts, split_name, hf_name, safe_hf_name, out
     filename = f"{safe_hf_name}_{split_name}_class_dist.png"
     filepath = os.path.join(output_dir, filename)
     plt.savefig(filepath)
-    plt.close() 
+    plt.close()
 
 def main():
     # --- 1. Argument Parsing ---
