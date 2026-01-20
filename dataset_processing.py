@@ -28,6 +28,8 @@ import datasets
 from sklearn.preprocessing import MultiLabelBinarizer
 from skmultilearn.model_selection import iterative_train_test_split
 
+from pathlib import Path
+
 import uuid
 
 # ---------------- DATA CONFIGS
@@ -217,7 +219,6 @@ def biodivner_process_bio_documents(data_dir: str, labels_to_keep: Set[str], spl
     return all_processed_sentences
 
 
-
 def cwed4eta_process_json_file(file_path = CLIRENER_DIR, annotator_importance = CLIRENER_ANNOTATOR_IMPORTANCE): 
     with open(file_path) as f:
         json_string = json.load(f)
@@ -274,6 +275,17 @@ def cwed4eta_process_json_file(file_path = CLIRENER_DIR, annotator_importance = 
         )
         
     return dataset
+
+def process_directory_of_json_files(directory_path, annotator_importance_list):
+    json_files = [file for file in os.listdir(directory_path) if file.endswith("json")]
+    
+    compound_json = []
+    
+    for file in json_files:
+        compound_json.extend(cwed4eta_process_json_file(str(Path(directory_path + file)), annotator_importance_list))
+        
+    return compound_json
+
 
 # ---------------- PREPROCESSING
 def tokenize_text(text):
