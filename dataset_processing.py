@@ -32,6 +32,34 @@ from pathlib import Path
 
 import uuid
 
+ANNOTATOR_EXPERT_GROUPS = {
+        "G1": {
+            "annotators": [5, 6],
+            "labels": {"Asset", "Policy", "Objective", "Method", "Field of Study", "Intellectual Artefact"}
+        },
+        "G2": {
+            "annotators": [4, 9],
+            "labels": {"Location", "Geographical Feature", "Body of Water", "Time Period", "Satellite"}
+        },
+        "G3": {
+            "annotators": [1, 10],
+            "labels": {"Mathematical Expression", "Measuring Device", "Physical Phenomenon", "Quantity"}
+        },
+        "G4": {
+            "annotators": [2, 3],
+            "labels": {"Body Part", "Chemical", "Disease", "Organism", "Ecosystem"}
+        },
+        "G5": {
+            "annotators": [11], # Added 11. "???" is ignored.
+            "labels": {"Energy Source", "Meteorological Phenomenon", "Natural Disaster", "Natural Phenomenon"}
+        },
+        "G6": {
+            "annotators": [7, 5, 8], # Note: Annotator 5 appears here too
+            "labels": {"Physical Artefact", "Organization", "Person", "System"}
+        }
+    }
+
+
 # ---------------- DATA CONFIGS
 IBMCCNER_DIR = "ibm-research/Climate-Change-NER"
 IBMCCNER_LABELS = {
@@ -161,8 +189,8 @@ def biodivner_process_bio_documents(data_dir: str, labels_to_keep: Set[str], spl
     
     # Process each CSV file in the directory
     for file_name in csv_files:
-        if "test" in file_name:
-            continue
+        # if "test" in file_name:
+        #     continue
         file_path = os.path.join(data_dir, file_name)
         print(f"Processing file: {file_path}...")
         
@@ -285,6 +313,23 @@ def process_directory_of_json_files(directory_path, annotator_importance_list):
         compound_json.extend(cwed4eta_process_json_file(str(Path(directory_path + file)), annotator_importance_list))
         
     return compound_json
+
+def generate_consistent_label_map(entity_types):
+    """
+    Generates a consistent BIO label map from a set of raw entity types.
+    Ensures 'O' is included and indices are deterministic (sorted).
+    """
+    # 1. Always start with 'O'
+    bio_labels = ["O"]
+    
+    # 2. Create B- and I- tags for every entity type
+    sorted_types = sorted(list(entity_types))
+    for label in sorted_types:
+        bio_labels.append(f"B-{label}")
+        bio_labels.append(f"I-{label}")
+        
+    
+    return {label: i for i, label in enumerate(bio_labels)}
 
 
 # ---------------- PREPROCESSING
@@ -607,7 +652,8 @@ def transform_to_ner_format(dataset, labels):
     for label in sorted_labels:
         bio_tags.append(f"B-{label}")
         bio_tags.append(f"I-{label}")
-        
+    
+    
     # Create the mapping from tag string to integer ID
     tag_to_id = {tag: i for i, tag in enumerate(bio_tags)}
     id_for_o = tag_to_id["O"]
@@ -733,89 +779,127 @@ def hf_dataset_to_gliner_format(hf_dataset_split, label_names):
         
     return transformed_data
 
+import numpy as np
+import datasets
+from sklearn.preprocessing import MultiLabelBinarizer
+# Ensure you have skmultilearn installed: pip install scikit-multilearn
+from skmultilearn.model_selection import iterative_train_test_split
+
 def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_size=0.1):
     """
-    Takes a list of NER data, performs a multi-label stratified split,
-    and returns a Hugging Face DatasetDict.
+    Takes a list of NER data, performs a multi-label stratified split 
+    (handling cases where val or test sizes are 0), and returns a 
+    Hugging Face DatasetDict.
 
     Args:
         transformed_dataset (list): The list of {'id', 'tokens', 'ner_tags'} dicts.
         tag_to_id (dict): The mapping from string tags to integer IDs.
-        test_size (float): The proportion of the dataset to include in the test split.
-        val_size (float): The proportion of the dataset to include in the validation split.
+        test_size (float): The proportion for the test split (can be 0.0).
+        val_size (float): The proportion for the validation split (can be 0.0).
 
     Returns:
         datasets.DatasetDict: The final dataset ready for use with Hugging Face.
     """
 
+    # Basic input validation
+    if test_size + val_size >= 1.0:
+        raise ValueError("Sum of test_size and val_size must be less than 1.0 to leave room for training data.")
+
     # --- 1. Prepare for Stratification ---
     id_to_tag = {i: tag for tag, i in tag_to_id.items()}
 
-    # Extract base entity types per sentence (e.g., "Chemical", "Organism")
+    # Extract base entity types per sentence for stratification
     sentence_labels = []
     for entry in transformed_dataset:
         labels = set()
         for tag_id in entry["ner_tags"]:
-            tag_name = id_to_tag[tag_id]
+            tag_name = id_to_tag.get(tag_id, "O")
             if tag_name != "O":
-                base_label = tag_name.split("-")[1]
+                # Assuming BIO format (e.g., B-PER -> PER)
+                base_label = tag_name.split("-")[1] if "-" in tag_name else tag_name
                 labels.add(base_label)
         sentence_labels.append(list(labels))
 
-    # Binarize labels for stratification
+    # Binarize labels
     mlb = MultiLabelBinarizer()
     y = mlb.fit_transform(sentence_labels)
+    
+    # Ensure y is 2D even if empty or single label
     if y.ndim == 1:
         y = y.reshape(-1, 1)
 
-    # We'll split on indices, not data itself
+    # Indices to split
     X = np.arange(len(transformed_dataset)).reshape(-1, 1)
 
-    # --- 2. Perform Two-Stage Stratified Split ---
+    # --- 2. Perform Conditional Stratified Split ---
+    
+    train_indices = []
+    val_indices = []
+    test_indices = []
 
-    # Stage 1: Train vs Temp (Val + Test)
-    train_X, _, temp_X, temp_y = iterative_train_test_split(
-        X, y, test_size=(test_size + val_size)
-    )
+    # Case 1: No validation or test (100% Train)
+    if val_size == 0 and test_size == 0:
+        train_indices = X.flatten()
+    
+    else:
+        # Stage 1: Split Train vs (Val + Test)
+        # We perform this split if there is *any* holdout data required
+        train_X, _, temp_X, temp_y = iterative_train_test_split(
+            X, y, test_size=(test_size + val_size)
+        )
+        train_indices = train_X.flatten()
 
-    # Stage 2: Val vs Test (from Temp)
-    relative_test_size = test_size / (test_size + val_size)
+        # Handle the holdout data (temp_X)
+        if val_size == 0:
+            # Case 2: Train + Test only (No Validation)
+            test_indices = temp_X.flatten()
+        elif test_size == 0:
+            # Case 3: Train + Val only (No Test)
+            val_indices = temp_X.flatten()
+        else:
+            # Case 4: Train + Val + Test
+            # Calculate relative size of test set within the temp set
+            # relative_test = target_test / (target_test + target_val)
+            relative_test_size = test_size / (test_size + val_size)
 
-    val_X, _, test_X, _ = iterative_train_test_split(
-        temp_X, temp_y, test_size=relative_test_size
-    )
-
-    # Extract final indices (X holds dataset indices)
-    train_indices = train_X.flatten()
-    val_indices = val_X.flatten()
-    test_indices = test_X.flatten()
+            val_X, _, test_X, _ = iterative_train_test_split(
+                temp_X, temp_y, test_size=relative_test_size
+            )
+            val_indices = val_X.flatten()
+            test_indices = test_X.flatten()
 
     # --- 3. Create Data Subsets ---
+    # Use simple list slicing logic
     train_data = [transformed_dataset[i] for i in train_indices]
     val_data = [transformed_dataset[i] for i in val_indices]
     test_data = [transformed_dataset[i] for i in test_indices]
 
     # --- 4. Define Hugging Face Features ---
+    # Ensure tags are sorted by ID for the ClassLabel feature
     bio_tags = sorted(tag_to_id.keys(), key=lambda k: tag_to_id[k])
+    
     features = datasets.Features({
         "id": datasets.Value("string"),
-        "text": datasets.Value("string"),
+        # Optional: Add 'text' if your dataset has it, otherwise remove
+        "text": datasets.Value("string"), 
         "tokens": datasets.Sequence(datasets.Value("string")),
         "ner_tags": datasets.Sequence(datasets.ClassLabel(names=bio_tags))
     })
 
     # --- 5. Assemble the DatasetDict ---
-    train_dataset = datasets.Dataset.from_list(train_data, features=features)
-    val_dataset = datasets.Dataset.from_list(val_data, features=features)
-    test_dataset = datasets.Dataset.from_list(test_data, features=features)
+    splits = {}
+    splits["train"] = datasets.Dataset.from_list(train_data, features=features)
 
-    dataset_dict = datasets.DatasetDict({
-        "train": train_dataset,
-        "validation": val_dataset,
-        "test": test_dataset
-    })
+    if len(val_data) > 0:
+        splits["validation"] = datasets.Dataset.from_list(val_data, features=features)
+
+    if len(test_data) > 0:
+        splits["test"] = datasets.Dataset.from_list(test_data, features=features)
+
+    dataset_dict = datasets.DatasetDict(splits)
 
     return dataset_dict
+
 
 def analyze_annotation_data(file_path: str, annotator_importance = CLIRENER_ANNOTATOR_IMPORTANCE) -> pd.DataFrame:
     """
