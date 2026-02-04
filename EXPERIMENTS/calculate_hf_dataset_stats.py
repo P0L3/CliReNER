@@ -104,9 +104,14 @@ def process_dataset_split(dataset_split, label_names):
     
     return stats, class_counts
 
-def plot_class_distribution(class_counts, split_name, hf_name, safe_hf_name, output_dir):
+def plot_class_distribution(class_counts, split_name, hf_name, safe_hf_name, output_dir, normalize=False, count_label=True):
     """
-    Generates and saves a standard bar chart (Vertical Bars) with angled X-labels.
+    Generates and saves a standard bar chart.
+    
+    Args:
+        normalize (bool): If True, bar height represents percentage (0-100).
+        count_label (bool): If True, the text on top of bars shows the raw count (int),
+                            retrieved directly from source data.
     """
     if not class_counts:
         return
@@ -114,40 +119,63 @@ def plot_class_distribution(class_counts, split_name, hf_name, safe_hf_name, out
     # Convert to DataFrame
     df = pd.DataFrame.from_dict(class_counts, orient='index', columns=['Count'])
     
-    # Sort Alphabetically by Index (Entity Name)
+    # Sort Alphabetically by Index (Entity Name) BEFORE plotting to ensure alignment
     df = df.sort_index()
+
+    # Determine values to plot (Y-axis height)
+    total = df['Count'].sum()
+    if normalize and total > 0:
+        plot_values = (df['Count'] / total) * 100
+    else:
+        plot_values = df['Count']
 
     # Plotting
     plt.figure(figsize=(12, 6)) 
     
     # Standard Vertical Bars
-    bars = plt.bar(df.index, df['Count'], color='#e05206', edgecolor='black')
+    bars = plt.bar(df.index, plot_values, color='#e05206', edgecolor='black')
     
-    # INFO
-    # plt.title(f"Class Distribution - {split_name.upper()}\n({hf_name})")
-    # plt.xlabel("Entity Type")
-    # plt.ylabel("Count")
-    
-    # rotation=45: Angles the text
-    # ha='right': Aligns the end of the text to the tick mark (prevents centering issues)
+    # X-Axis Styling
     plt.xticks(rotation=45, ha='right') 
     
+    # Y-Axis Bounds
+    if normalize:
+        plt.ylim([0, 20])
+    else:
+        plt.ylim([0, 360])
+        
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     
-    # Add numbers on top of bars
-    for bar in bars:
-        yval = bar.get_height()
+    # Access raw counts directly for annotation
+    # Since df is sorted, df['Count'] aligns 1:1 with 'bars'
+    raw_counts = df['Count'].values
+
+    for bar, raw_count in zip(bars, raw_counts):
+        y_plot_val = bar.get_height() # This is the visual height (%, or count)
+        
+        # Determine what text to write
+        if count_label:
+            # Direct access to the raw integer (no reconstruction math)
+            label_text = str(int(raw_count))
+        else:
+            # If not using count labels, display the formatted Y-value
+            if normalize:
+                label_text = f"{y_plot_val:.1f}%"
+            else:
+                label_text = str(int(y_plot_val))
+
         plt.text(bar.get_x() + bar.get_width()/2, 
-                 yval, 
-                 int(yval), 
+                 y_plot_val, 
+                 label_text, 
                  va='bottom', 
                  ha='center', 
-                 fontsize=9) # Removed rotation on the count number for better readability
+                 fontsize=9)
 
     plt.tight_layout()
     
     # Save File
-    filename = f"{safe_hf_name}_{split_name}_class_dist.png"
+    suffix = "_norm" if normalize else ""
+    filename = f"{safe_hf_name}_{split_name}_class_dist{suffix}.png"
     filepath = os.path.join(output_dir, filename)
     plt.savefig(filepath)
     plt.close()
@@ -159,9 +187,13 @@ def main():
                         help="Hugging Face dataset path (default: P0L3/CliReNER_v_1_1_28_SILVER)")
     parser.add_argument("--output_dir", type=str, default="PLOTS", 
                         help="Directory to save plots and CSV (default: PLOTS)")
+    parser.add_argument("--norm",  action=argparse.BooleanOptionalAction, default=False,
+                        help="Normalize the output?")
     
     args = parser.parse_args()
     
+    normalize = args.norm
+
     hf_name = args.dataset
     output_dir = args.output_dir
     
@@ -225,7 +257,7 @@ def main():
               f"{int(stats['Total Entities']):<10}")
         
         # Generate Plot
-        plot_class_distribution(counts, split_name, hf_name, safe_hf_name, output_dir)
+        plot_class_distribution(counts, split_name, hf_name, safe_hf_name, output_dir, normalize=normalize)
         
         # Collect Data for CSV
         csv_row = {"Split": split_name}

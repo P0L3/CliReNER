@@ -1,0 +1,380 @@
+Loading data from clirener_silver_aggregated_mean_std.csv...
+
+============================================================
+TOP 3 MODELS PER CLASS (SILVER)
+Metric: strict_f1_mean
+============================================================
+
+--- Class: Asset ---
+1. CliReBERT: 0.6000
+2. GLiNER_Small: 0.4667
+3. RoBERTa Base: 0.4315
+
+--- Class: Body Part ---
+1. CliReBERT: 0.8000
+2. GLiNER_Small: 0.8000
+3. SciBERT: 0.8000
+
+--- Class: Body of Water ---
+1. GLiNER_Medium: 0.7696
+2. INDUS Base: 0.7455
+3. ClimateBERT: 0.7451
+
+--- Class: Chemical ---
+1. RoBERTa Base: 0.9091
+2. BERT Base: 0.9049
+3. SciBERT: 0.8941
+
+--- Class: Disease ---
+1. GLiNER_Medium: 1.0000
+2. Distil RoBERTa: 1.0000
+3. BERT Base: 0.9407
+
+--- Class: Ecosystem ---
+1. CliReBERT: 0.9152
+2. RoBERTa Base: 0.8818
+3. EnvironmentalBERT: 0.8667
+
+--- Class: Energy Source ---
+1. GLiNER_Medium: 0.7500
+2. GLiNER_Small: 0.7500
+3. CliSciBERT: 0.6000
+
+--- Class: Field of Study ---
+1. GLiNER_Small: 0.3758
+2. EnvironmentalBERT: 0.1133
+3. SciBERT: 0.0697
+
+--- Class: Geographical Feature ---
+1. GLiNER_Medium: 0.4071
+2. EnvironmentalBERT: 0.3380
+3. ClimateBERT: 0.2580
+
+--- Class: Intellectual Artefact ---
+1. INDUS Base: 0.5949
+2. SciBERT: 0.5669
+3. CliSciBERT: 0.5611
+
+--- Class: Location ---
+1. GLiNER_Small: 0.7632
+2. GLiNER_Medium: 0.7357
+3. INDUS Base: 0.7114
+
+--- Class: Mathematical Expression ---
+1. GLiNER_Medium: 0.3177
+2. CliReBERT: 0.1665
+3. SciBERT: 0.1361
+
+--- Class: Measuring Device ---
+1. INDUS Base: 0.7363
+2. GLiNER_Medium: 0.7240
+3. CliReBERT: 0.7115
+
+--- Class: Meteorological Phenomenon ---
+1. GLiNER_Small: 0.7019
+2. Distil RoBERTa: 0.6637
+3. EnvironmentalBERT: 0.6500
+
+--- Class: Method ---
+1. Distil RoBERTa: 0.7164
+2. EnvironmentalBERT: 0.7137
+3. ClimateBERT: 0.7052
+
+--- Class: Natural Disaster ---
+1. GLiNER_Medium: 0.5000
+2. GLiNER_Small: 0.2857
+3. SciBERT: 0.1810
+
+--- Class: Natural Phenomenon ---
+1. GLiNER_Medium: 0.3617
+2. RoBERTa Base: 0.2508
+3. CliReBERT: 0.2505
+
+--- Class: Organism ---
+1. GLiNER_Small: 0.8595
+2. GLiNER_Medium: 0.8543
+3. INDUS SDE Base: 0.8528
+
+--- Class: Organization ---
+1. BERT Base: 0.8751
+2. GLiNER_Medium: 0.8500
+3. GLiNER_Small: 0.8000
+
+--- Class: Other ---
+1. INDUS Base: 0.4586
+2. GLiNER_Small: 0.4261
+3. INDUS SDE Base: 0.4170
+
+--- Class: Person ---
+1. SciBERT: 0.7738
+2. INDUS Base: 0.7661
+3. RoBERTa Base: 0.7408
+
+--- Class: Physical Artefact ---
+1. GLiNER_Medium: 0.4039
+2. GLiNER_Small: 0.2339
+3. CliReBERT: 0.1632
+
+--- Class: Physical Phenomenon ---
+1. ClimateBERT: 0.5690
+2. Distil RoBERTa: 0.5661
+3. CliSciBERT: 0.5524
+
+--- Class: Policy ---
+1. GLiNER_Small: 0.4258
+2. Distil RoBERTa: 0.4204
+3. RoBERTa Base: 0.4159
+
+--- Class: Quantity ---
+1. CliSciBERT: 0.6212
+2. SciBERT: 0.6192
+3. GLiNER_Small: 0.6111
+
+--- Class: Satellite ---
+1. SciBERT: 0.6476
+2. GLiNER_Small: 0.5962
+3. GLiNER_Medium: 0.5714
+
+--- Class: System ---
+1. CliReBERT: 0.4825
+2. GLiNER_Medium: 0.4597
+3. SciBERT: 0.3661
+
+--- Class: Time Period ---
+1. INDUS SDE Base: 0.7487
+2. INDUS Base: 0.7295
+3. GLiNER_Medium: 0.7269
+
+(Saved detailed list to 'analysis_silver_top_3_per_class.csv')
+
+============================================================
+AVERAGE PERFORMANCE BY GROUP (SILVER)
+Metric: strict_f1_mean
+============================================================
+Warning: The following models were ignored (not in group definition): ['GLiNER_Medium' 'GLiNER_Small' 'INDUS SDE Base' 'SciClimateBERT']
+
+Average F1 Score per Group per Class:
+Model_Group                RoBERTas   BERTs  DistilRoBERTas
+tag                                                        
+Asset                        0.2339  0.3736          0.3347
+Body Part                    0.5800  0.7000          0.4815
+Body of Water                0.7273  0.6538          0.6607
+Chemical                     0.8947  0.8481          0.8043
+Disease                      0.7162  0.8747          0.8951
+Ecosystem                    0.8576  0.8159          0.8111
+Energy Source                0.5464  0.5250          0.5000
+Field of Study               0.0182  0.0439          0.0378
+Geographical Feature         0.1522  0.1671          0.2712
+Intellectual Artefact        0.5448  0.5531          0.5205
+Location                     0.6782  0.6382          0.5370
+Mathematical Expression      0.0433  0.0930          0.0074
+Measuring Device             0.7051  0.6074          0.5570
+Meteorological Phenomenon    0.6255  0.5650          0.6423
+Method                       0.6763  0.6357          0.7118
+Natural Disaster             0.1008  0.1030          0.1476
+Natural Phenomenon           0.1308  0.1737          0.0824
+Organism                     0.8296  0.8077          0.7920
+Organization                 0.7122  0.7283          0.6702
+Other                        0.3987  0.3594          0.3276
+Person                       0.7534  0.6910          0.7023
+Physical Artefact            0.1421  0.1022          0.1296
+Physical Phenomenon          0.5359  0.4953          0.5304
+Policy                       0.3360  0.3381          0.3860
+Quantity                     0.5835  0.5921          0.5297
+Satellite                    0.4759  0.4938          0.3089
+System                       0.1647  0.3631          0.1645
+Time Period                  0.7272  0.6896          0.6905
+
+(Saved group analysis to 'analysis_silver_group_performance.csv')
+
+
+
+
+Loading data from clirener_aggregated_mean_std.csv...
+
+============================================================
+TOP 3 MODELS PER CLASS (GOLD)
+Metric: strict_f1_mean
+============================================================
+
+--- Class: Asset ---
+1. Gemini 3.0 Pro ZS: 0.4375
+2. GPT 5.2 Pro ZS: 0.4255
+3. GLiNER: Small v2.5: 0.4234
+
+--- Class: Body Part ---
+1. GLiNER: Medium v2.5: 0.7832
+2. Gemini 3.0 Pro ZS: 0.7723
+3. GLiNER: Small v2.5: 0.7400
+
+--- Class: Body of Water ---
+1. GLiNER: Medium v2.5: 0.9225
+2. INDUS Base: 0.8464
+3. GLiNER: Small v2.5: 0.8457
+
+--- Class: Chemical ---
+1. INDUS SDE v0.2: 0.8828
+2. GLiNER: Small v2.5: 0.8821
+3. INDUS Base: 0.8805
+
+--- Class: Disease ---
+1. Gemini 2.5 Pro ZS: 0.8522
+2. Gemini 3.0 Pro ZS: 0.8393
+3. GPT 5.1 ZS: 0.8393
+
+--- Class: Ecosystem ---
+1. GLiNER: Medium v2.5: 0.8431
+2. GLiNER: Small v2.5: 0.7825
+3. Gemini 3.0 Pro ZS: 0.7723
+
+--- Class: Energy Source ---
+1. GLiNER: Medium v2.5: 0.7838
+2. GLiNER: Small v2.5: 0.7791
+3. CliSciBERT: 0.6553
+
+--- Class: Field of Study ---
+1. DeepSeek-V3.2 (Thinking) ZS: 0.6452
+2. GPT 5.1 ZS: 0.6292
+3. Claude Sonnet 4.5 ZS: 0.6154
+
+--- Class: Geographical Feature ---
+1. GLiNER: Medium v2.5: 0.6016
+2. GLiNER: Medium v2.5 ZS: 0.5686
+3. GLiNER: Small v2.5 ZS: 0.5376
+
+--- Class: Intellectual Artefact ---
+1. INDUS Base: 0.5499
+2. GLiNER: Medium v2.5: 0.5411
+3. CliSciBERT: 0.5395
+
+--- Class: Location ---
+1. INDUS Base: 0.8070
+2. INDUS SDE v0.2: 0.7751
+3. CliSciBERT: 0.7004
+
+--- Class: Mathematical Expression ---
+1. Gemini 3.0 Pro ZS: 0.5417
+2. Claude Sonnet 4.5 ZS: 0.5412
+3. GLiNER: Medium v2.5 ZS: 0.5155
+
+--- Class: Measuring Device ---
+1. INDUS Base: 0.7266
+2. GLiNER: Medium v2.5: 0.6692
+3. Distil RoBERTa: 0.6335
+
+--- Class: Meteorological Phenomenon ---
+1. GLiNER: Small v2.5: 0.5924
+2. GLiNER: Medium v2.5: 0.5546
+3. Gemini 2.5 Pro ZS: 0.5294
+
+--- Class: Method ---
+1. Distil RoBERTa: 0.6479
+2. RoBERTa Base: 0.6369
+3. INDUS Base: 0.6315
+
+--- Class: Natural Disaster ---
+1. GLiNER: Medium v2.5 ZS: 0.8163
+2. Claude Sonnet 4.5 ZS: 0.6458
+3. Gemini 2.5 Pro ZS: 0.6327
+
+--- Class: Natural Phenomenon ---
+1. Claude Opus 4.5 ZS: 0.6263
+2. DeepSeek-V3.2 (Thinking) ZS: 0.5714
+3. DeepSeek-V3.2 (Non-Thinking) ZS: 0.5625
+
+--- Class: Organism ---
+1. INDUS Base: 0.8990
+2. GLiNER: Small v2.5: 0.8899
+3. GLiNER: Medium v2.5: 0.8664
+
+--- Class: Organization ---
+1. GLiNER: Medium v2.5 ZS: 0.7755
+2. GLiNER: Small v2.5: 0.7672
+3. GLiNER: Small v2.5 ZS: 0.7216
+
+--- Class: Other ---
+1. INDUS Base: 0.4695
+2. SciBERT: 0.3793
+3. BERT Base: 0.3759
+
+--- Class: Person ---
+1. GLiNER: Small v2.5: 0.7301
+2. GLiNER: Medium v2.5: 0.7210
+3. Gemini 2.5 Pro ZS: 0.6698
+
+--- Class: Physical Artefact ---
+1. Claude Sonnet 4.5 ZS: 0.7129
+2. DeepSeek-V3.2 (Thinking) ZS: 0.7010
+3. Claude Opus 4.5 ZS: 0.6667
+
+--- Class: Physical Phenomenon ---
+1. RoBERTa Base: 0.4949
+2. CliSciBERT: 0.4677
+3. Distil RoBERTa: 0.4500
+
+--- Class: Policy ---
+1. GLiNER: Medium v2.5: 0.6492
+2. Claude Opus 4.5 ZS: 0.4643
+3. DeepSeek-V3.2 (Non-Thinking) ZS: 0.4404
+
+--- Class: Quantity ---
+1. INDUS Base: 0.6809
+2. CliSciBERT: 0.6710
+3. GLiNER: Small v2.5: 0.6612
+
+--- Class: Satellite ---
+1. GLiNER: Medium v2.5: 0.8526
+2. GLiNER: Small v2.5 ZS: 0.8043
+3. GLiNER: Medium v2.5 ZS: 0.8000
+
+--- Class: System ---
+1. GLiNER: Medium v2.5: 0.3712
+2. Gemini 2.5 Pro ZS: 0.3434
+3. CliReBERT: 0.3208
+
+--- Class: Time Period ---
+1. GLiNER: Small v2.5: 0.8428
+2. GLiNER: Medium v2.5: 0.8262
+3. INDUS SDE v0.2: 0.7658
+
+(Saved detailed list to 'analysis_gold_top_3_per_class.csv')
+
+============================================================
+AVERAGE PERFORMANCE BY GROUP (GOLD)
+Metric: strict_f1_mean
+============================================================
+Warning: The following models were ignored (not in group definition): ['SciClimateBERT']
+
+Average F1 Score per Group per Class:
+Model_Group                RoBERTas   BERTs  DistilRoBERTas  GliNERs  ZS LLMs
+tag                                                                          
+Asset                        0.0887  0.1541          0.1316   0.3425   0.2811
+Body Part                    0.5243  0.6450          0.5019   0.6044   0.6546
+Body of Water                0.7631  0.6442          0.6862   0.7623   0.6384
+Chemical                     0.8759  0.8439          0.8644   0.8228   0.6964
+Disease                      0.7681  0.7522          0.7421   0.7670   0.7921
+Ecosystem                    0.5488  0.5294          0.5248   0.7611   0.6814
+Energy Source                0.4780  0.5501          0.5528   0.6755   0.4489
+Field of Study               0.1572  0.2725          0.2201   0.4572   0.6003
+Geographical Feature         0.2559  0.2620          0.2563   0.5304   0.3826
+Intellectual Artefact        0.4966  0.4903          0.4523   0.3717   0.4053
+Location                     0.7538  0.6352          0.6192   0.4865   0.4255
+Mathematical Expression      0.0277  0.0796          0.0162   0.4078   0.3648
+Measuring Device             0.6160  0.5714          0.5907   0.6050   0.4254
+Meteorological Phenomenon    0.4355  0.3577          0.3463   0.4651   0.4482
+Method                       0.5941  0.5277          0.6240   0.4224   0.5407
+Natural Disaster             0.2701  0.3015          0.3332   0.5817   0.5706
+Natural Phenomenon           0.0933  0.2309          0.1223   0.1485   0.5194
+Organism                     0.8138  0.7399          0.7482   0.8428   0.6653
+Organization                 0.5576  0.5182          0.5273   0.7418   0.4923
+Other                        0.3962  0.3522          0.3331   0.1703   0.0595
+Person                       0.4068  0.4438          0.3556   0.6206   0.4354
+Physical Artefact            0.1305  0.1675          0.1994   0.2478   0.6207
+Physical Phenomenon          0.4357  0.4059          0.4074   0.3609   0.2704
+Policy                       0.1083  0.1700          0.1812   0.4284   0.4101
+Quantity                     0.6405  0.6191          0.5756   0.4308   0.4329
+Satellite                    0.3517  0.4111          0.2171   0.8049   0.4940
+System                       0.0805  0.1873          0.0995   0.2945   0.2319
+Time Period                  0.7178  0.6805          0.6862   0.6143   0.4317
+
+(Saved group analysis to 'analysis_gold_group_performance.csv')
