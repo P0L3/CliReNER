@@ -33,22 +33,24 @@ SEEDS = [0, 42, 3012, 33, 131]
 
 # 5. List of Models to Evaluate. 
 # FORMAT: ("MODEL_TYPE", "HuggingFace_Model_ID")
-# Add all 11 models here.
+# Add all 13 models here.
 MODELS_TO_EVALUATE = [
-    ("SPANMARKER", "FacebookAI/roberta-base"),
+    # ("SPANMARKER", "FacebookAI/roberta-base"),
+    # ("SPANMARKER", "nasa-impact/nasa-smd-ibm-v0.1"),
+    # ("SPANMARKER", "nasa-impact/indus-sde-v0.2"),
     
-    ("SPANMARKER", "google-bert/bert-base-uncased"),
-    ("SPANMARKER", "ESGBERT/EnvironmentalBERT-base"),
-    ("SPANMARKER", "allenai/scibert_scivocab_uncased"),
-    ("SPANMARKER", "P0L3/cliscibert_scivocab_uncased"),
-    ("SPANMARKER", "P0L3/clirebert_clirevocab_uncased"),
+    # ("SPANMARKER", "google-bert/bert-base-uncased"),
+    # ("SPANMARKER", "allenai/scibert_scivocab_uncased"),
+    # ("SPANMARKER", "P0L3/cliscibert_scivocab_uncased"),
+    # ("SPANMARKER", "P0L3/clirebert_clirevocab_uncased"),
     
-    ("SPANMARKER", "distilbert/distilroberta-base"),
-    ("SPANMARKER", "climatebert/distilroberta-base-climate-f"),
+    # ("SPANMARKER", "ESGBERT/EnvironmentalBERT-base"),
+    # ("SPANMARKER", "distilbert/distilroberta-base"),
+    # ("SPANMARKER", "climatebert/distilroberta-base-climate-f"),
     ("SPANMARKER", "P0L3/sciclimatebert"),
     
-    ("GLINER", "gliner-community/gliner_medium-v2.5"),
-    ("GLINER", "gliner-community/gliner_small-v2.5")
+    # ("GLINER", "gliner-community/gliner_medium-v2.5"),
+    # ("GLINER", "gliner-community/gliner_small-v2.5")
 ]
 
 def load_and_merge_gold_data(dataset_id):

@@ -66,7 +66,7 @@ python -m EXPERIMENTS.finetune_evaluate_pipeline  --model_type SPANMARKER  --dat
 
 Command used to run evaluation on GOLD dataset with only author annotations:
 ```shell
-python -m EXPERIMENTS.gold_evaluate
+python -m EXPERIMENTS.evaluate_gold
 ```
 
 **zeroshot_evaluate.py**
