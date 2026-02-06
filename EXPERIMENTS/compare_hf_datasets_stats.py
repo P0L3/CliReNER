@@ -85,6 +85,8 @@ def plot_comparative_distribution(counts1, name1, counts2, name2, output_dir):
     df[f'{name2}_pct'] = (df[name2] / total2) * 100
 
     # 2. Plotting Setup
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["mathtext.fontset"] = "dejavuserif"
     labels = df.index
     x = np.arange(len(labels))  # Label locations
     bar_width = 0.45

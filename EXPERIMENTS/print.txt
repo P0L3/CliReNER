@@ -1,0 +1,91 @@
+################################################################################
+### DATASET: GOLD | RANKED BY STRICT MICRO F1
+################################################################################
+ Rank              model_display_name  strict_f1_micro
+    1             GLiNER: Medium v2.5         0.633534
+    2              GLiNER: Small v2.5         0.603175
+    3               Gemini 3.0 Pro ZS         0.554850
+    4                      INDUS Base         0.542367
+    5                      CliSciBERT         0.532962
+    6                         SciBERT         0.530690
+    7                    RoBERTa Base         0.521725
+    8               Gemini 2.5 Pro ZS         0.505072
+    9                  SciClimateBERT         0.503101
+   10                       BERT Base         0.490995
+   11                     ClimateBERT         0.488169
+   12                  Distil RoBERTa         0.483219
+   13            Claude Sonnet 4.5 ZS         0.479459
+   14               EnvironmentalBERT         0.471304
+   15              Claude Opus 4.5 ZS         0.470867
+   16                  INDUS SDE v0.2         0.470772
+   17          GLiNER: Medium v2.5 ZS         0.463189
+   18                       CliReBERT         0.448595
+   19     DeepSeek-V3.2 (Thinking) ZS         0.437228
+   20                  GPT 5.2 Pro ZS         0.416536
+   21 DeepSeek-V3.2 (Non-Thinking) ZS         0.412592
+   22                      GPT 5.1 ZS         0.395620
+   23           GLiNER: Small v2.5 ZS         0.367816
+
+################################################################################
+### DATASET: GOLD | RANKED BY STRICT MACRO F1
+################################################################################
+ Rank              model_display_name  strict_f1_macro
+    1             GLiNER: Medium v2.5         0.631189
+    2              GLiNER: Small v2.5         0.579243
+    3               Gemini 3.0 Pro ZS         0.569355
+    4               Gemini 2.5 Pro ZS         0.518543
+    5            Claude Sonnet 4.5 ZS         0.500379
+    6          GLiNER: Medium v2.5 ZS         0.499233
+    7              Claude Opus 4.5 ZS         0.491650
+    8                    RoBERTa Base         0.482199
+    9                         SciBERT         0.475958
+   10                      CliSciBERT         0.474729
+   11                      INDUS Base         0.464972
+   12     DeepSeek-V3.2 (Thinking) ZS         0.454718
+   13                  GPT 5.2 Pro ZS         0.443064
+   14                  SciClimateBERT         0.442393
+   15                  Distil RoBERTa         0.441165
+   16                       BERT Base         0.434457
+   17 DeepSeek-V3.2 (Non-Thinking) ZS         0.432401
+   18                     ClimateBERT         0.426479
+   19                      GPT 5.1 ZS         0.424192
+   20               EnvironmentalBERT         0.408955
+   21                       CliReBERT         0.406736
+   22           GLiNER: Small v2.5 ZS         0.400210
+   23                  INDUS SDE v0.2         0.379977
+
+################################################################################
+### DATASET: SILVER | RANKED BY STRICT MICRO F1
+################################################################################
+ Rank  model_display_name  strict_f1_micro
+    1 GLiNER: Medium v2.5         0.602314
+    2             SciBERT         0.594461
+    3          INDUS Base         0.589885
+    4        RoBERTa Base         0.587781
+    5  GLiNER: Small v2.5         0.586063
+    6          CliSciBERT         0.585176
+    7      SciClimateBERT         0.573632
+    8           BERT Base         0.571983
+    9      INDUS SDE v0.2         0.554841
+   10         ClimateBERT         0.552213
+   11      Distil RoBERTa         0.546708
+   12   EnvironmentalBERT         0.546111
+   13           CliReBERT         0.545416
+
+################################################################################
+### DATASET: SILVER | RANKED BY STRICT MACRO F1
+################################################################################
+ Rank  model_display_name  strict_f1_macro
+    1 GLiNER: Medium v2.5         0.584151
+    2  GLiNER: Small v2.5         0.551342
+    3             SciBERT         0.524322
+    4        RoBERTa Base         0.516611
+    5           CliReBERT         0.511387
+    6          CliSciBERT         0.492508
+    7      Distil RoBERTa         0.489742
+    8      SciClimateBERT         0.485652
+    9           BERT Base         0.476312
+   10          INDUS Base         0.475577
+   11         ClimateBERT         0.468733
+   12   EnvironmentalBERT         0.459451
+   13      INDUS SDE v0.2         0.401349
