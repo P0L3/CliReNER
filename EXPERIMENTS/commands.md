@@ -81,3 +81,13 @@ Command used to run full training and evaluation script on Windows PC1 and/or PC
 ```
 "C:\Program Files\Git\bin\sh.exe" ./EXPERIMENTS/run_seeds_spanmarker.sh  
 ```
+
+**generate_comparative_table.py**
+Command used to run qualitative analysis on fine-tuned models:
+```
+python -m EXPERIMENTS.generate_comparative_table --baseline_id "distilbert/distilroberta-base" --challenger_id "P0L3/sciclimatebert" --baseline_type SPANMARKER --challenger_type SPANMARKER
+```
+or this command for all possible combinations in encoder families:
+```
+python -m EXPERIMENTS.generate_comparative_table_grouprun
+```

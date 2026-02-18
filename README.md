@@ -41,6 +41,9 @@ Below is an overview of the key directories and scripts in the project:
 ├── EXPERIMENTS/                # Core scripts for training and evaluation
 │   ├── DATASET_STATS/          # Output plots for dataset statistics
 │   ├── commands.md             # Detailed command reference
+│   ├── generate_comparative_table.py # Qualitative analysis (Lost/Shared/Gained tables)
+│   ├── generate_comparative_table_grouprun.py # Batch execution of comparative qualitative analysis
+│   ├── create_summary.py             # Generates final WandB leaderboards
 │   ├── create_hf_dataset.py    # Script to build HuggingFace datasets
 │   ├── finetune.py             # Single-run fine-tuning script
 │   ├── finetune_evaluate_pipeline.py  # Multi-seed full experiment pipeline

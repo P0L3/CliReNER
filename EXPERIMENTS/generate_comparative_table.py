@@ -10,15 +10,47 @@ from datasets import load_dataset, concatenate_datasets
 from span_marker import SpanMarkerModel
 from gliner import GLiNER
 
-# Import path resolution logic from your framework
+# Import path resolution logic
 from EXPERIMENTS.finetune import get_output_dir
+from dataset_processing import shorten_name
 
 # --- CONFIGURATION ---
 DEFAULT_SEEDS = [0, 42, 3012, 33, 131]
-TARGET_TAGS = [
-    "Body Part", "Organization", "Ecosystem",  # High Loss types
-    "Method", "Intellectual Artefact"          # High Gain types
-]
+
+all_tags = """Asset
+Body of Water
+Body Part
+Chemical
+Disease
+Ecosystem
+Energy Source
+Field of Study
+Geographical Feature
+Intellectual Artefact
+Location
+Mathematical Expression
+Measuring Device
+Meteorological Phenomenon
+Method
+Natural Disaster
+Natural Phenomenon
+Organism
+Organization
+Other
+Person
+Physical Artefact
+Physical Phenomenon
+Policy or Objective
+Quantity
+Satellite
+System
+Time Period"""
+
+TARGET_TAGS = all_tags.split("\n")
+
+# --- THRESHOLDS (The 4-1 Rule) ---
+SUCCESS_THRESHOLD = 4  # Must be found in >= 4 seeds
+FAILURE_THRESHOLD = 1  # Must be found in <= 1 seed
 
 def load_gold_data(dataset_id):
     print(f"--- Loading Dataset: {dataset_id} ---")
@@ -68,7 +100,6 @@ def run_inference_single_seed(model_path, model_type, texts, device):
     return predictions
 
 def get_seed_frequencies(base_dir, model_type, model_id, train_dataset, texts, device, seeds):
-    """Returns a list of Counters: maps (entity, label) to number of seeds that found it."""
     print(f"\n>>> Analyzing Model: {model_id}")
     freq_maps = [Counter() for _ in texts]
     for seed in seeds:
@@ -98,19 +129,30 @@ def main():
     parser.add_argument("--challenger_type", type=str, default="SPANMARKER")
     parser.add_argument("--eval_dataset", type=str, default="P0L3/CliReNER_v_1_1_28_GOLD_authorannots")
     parser.add_argument("--train_dataset", type=str, default="P0L3/CliReNER_v_1_1_28_SILVER")
-    parser.add_argument("--output", type=str, default="PLOTS/hardened_comparison.md")
+    parser.add_argument("--output_dir", type=str, default="RESULTS/QUALITATIVE_MODEL_COMPARISON", help="Directory to save the resulting .md file")
     args = parser.parse_args()
 
+    # --- Construct Naming Convention ---
+    base_short = shorten_name(args.baseline_id)
+    chall_short = shorten_name(args.challenger_id)
+    # Format: base_vs_chall_S4_F1.md
+    filename = f"{base_short}_vs_{chall_short}_S{SUCCESS_THRESHOLD}_F{FAILURE_THRESHOLD}.md"
+    output_path = Path(args.output_dir) / filename
+
+    # 1. Load Data
     dataset, id2label = load_gold_data(args.eval_dataset)
     texts, gold_sets = dataset['text'], [extract_gold_spans(row, id2label) for row in dataset]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # Get frequencies (0 to 5) for every potential entity
+    # 2. Get frequencies
     base_freqs = get_seed_frequencies("EXPERIMENTS/models", args.baseline_type, args.baseline_id, args.train_dataset, texts, device, DEFAULT_SEEDS)
     chall_freqs = get_seed_frequencies("EXPERIMENTS/models", args.challenger_type, args.challenger_id, args.train_dataset, texts, device, DEFAULT_SEEDS)
 
+    # 3. Categorization
     results = {tag: {"lost": [], "shared": [], "gained": []} for tag in TARGET_TAGS}
 
+    print(f"\n--- Categorizing (4-1 Rule: Success >={SUCCESS_THRESHOLD}, Failure <={FAILURE_THRESHOLD}) ---")
+    
     for i, text in enumerate(texts):
         G = gold_sets[i]
         B_map, C_map = base_freqs[i], chall_freqs[i]
@@ -123,30 +165,35 @@ def main():
             
             ctx = format_context(text, ent_text)
 
-            # HARDENED LOGIC:
-            # Shared: Both had Majority (>=3)
-            if b_votes >= 3 and c_votes >= 3:
+            if b_votes >= SUCCESS_THRESHOLD and c_votes >= SUCCESS_THRESHOLD:
                 results[ent_label]["shared"].append(ctx)
-            # Lost: Baseline had Majority (>=3) AND Challenger was completely blind (0)
-            elif b_votes >= 3 and c_votes == 0:
+            elif b_votes >= SUCCESS_THRESHOLD and c_votes <= FAILURE_THRESHOLD:
                 results[ent_label]["lost"].append(ctx)
-            # Gained: Challenger had Majority (>=3) AND Baseline was completely blind (0)
-            elif c_votes >= 3 and b_votes == 0:
+            elif c_votes >= SUCCESS_THRESHOLD and b_votes <= FAILURE_THRESHOLD:
                 results[ent_label]["gained"].append(ctx)
 
-    print(f"--- Writing to {args.output} ---")
-    with open(args.output, "w") as f:
-        f.write(f"# Hardened Architectural Comparison: {args.baseline_id} vs {args.challenger_id}\n")
-        f.write("- **Criteria for 'Correct':** Found in $\ge 3$ out of 5 seeds.\n")
-        f.write("- **Criteria for 'Blind':** Found in 0 out of 5 seeds.\n\n")
-        f.write("| Entity Type | Baseline Correct & Challenger Blind | Shared (Both Correct) | Challenger Correct & Baseline Blind |\n")
+    # 4. Generate Table
+    print(f"--- Writing to {output_path} ---")
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(f"# Robust Architectural Comparison: {args.baseline_id} vs {args.challenger_id}\n")
+        f.write(f"- **Strictness (4-1 Rule):**\n")
+        f.write(f"  - **Stable Success:** Found in $\ge {SUCCESS_THRESHOLD}/5$ seeds.\n")
+        f.write(f"  - **Stable Failure:** Found in $\le {FAILURE_THRESHOLD}/5$ seeds.\n\n")
+        
+        f.write(f"| Entity Type | Correct in Baseline ONLY ({base_short}) | Correct in BOTH | Correct in Challenger ONLY ({chall_short}) |\n")
         f.write("|---|---|---|---|\n")
+        
         for tag in TARGET_TAGS:
             def sample_cell(key):
-                items = list(set(results[tag][key])) # Unique strings
-                if not items: return "*(None Found)*"
+                items = list(set(results[tag][key]))
+                if not items: return "*(None found matching 4-1 rule)*"
                 return "<br><br>".join(random.sample(items, min(2, len(items))))
+            
             f.write(f"| **{tag}** | {sample_cell('lost')} | {sample_cell('shared')} | {sample_cell('gained')} |\n")
+
+    print("Done.")
 
 if __name__ == "__main__":
     main()
