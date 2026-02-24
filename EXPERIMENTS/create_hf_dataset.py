@@ -8,6 +8,8 @@ parser = argparse.ArgumentParser(
                     epilog='...')
 parser.add_argument("--lsfile_path", type=pathlib.Path)
 parser.add_argument("--hf_name", type=str, default="P0L3/CliReNER_v_1_1_28_SILVER")
+parser.add_argument("--test_s", type=float, default=0.1)
+parser.add_argument("--val_s", type=float, default=0.1)
 args = parser.parse_args()
 
 print("Loading data from: ", args.lsfile_path)
@@ -17,7 +19,7 @@ print("Transforming data to BIO tags ...")
 transformed_dataset, tag_map = transform_to_ner_format(data, CLIRENER_LABELS_V1)
 
 print("Transforming data to HF Dataset ...")
-hf_dataset = ner_dataset_to_hf_format(transformed_dataset, tag_map)
+hf_dataset = ner_dataset_to_hf_format(transformed_dataset, tag_map, test_size=args.test_s, val_size=args.val_s)
 
 print("Dataset info:")
 print(hf_dataset)

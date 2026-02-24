@@ -11,6 +11,16 @@ Command used to create CliReNER GOLD on HF (preannotator annotations):
 python3 -m EXPERIMENTS.create_hf_dataset --lsfile_path "RESULTS/golden_50_EneSou_BodOfWat_Org_PhyPhe_Loc_PhyArt_NatDis_Che_BodPar_MatExp_GeoFea_Org_IntArt_Sys_Ass_Met_FieOfStu_MetPhe_TimPer_Eco_Pol_NatPhe_Qua_Per_Dis_MeaDev_Sat.json" --hf_name "P0L3/CliReNER_v_1_1_28_GOLD_authorannots"
 ```
 
+Command used to create IBMCCNER annotated by CliReNER schema (no test and val):
+```shell
+python3 -m EXPERIMENTS.create_hf_dataset --lsfile_path "DATA/LABEL_STUDIO/LS_IBMCCNER/project-36-at-2025-12-08-13-43-e4ba28f1.json" --hf_name "P0L3/Climate-Change-NER-S50-CliReNER" --test_s 0.0 --val_s 0.0
+```
+
+Command used to create BioDivNER annotated by CliReNER schema (no test and val):
+```shell
+python3 -m EXPERIMENTS.create_hf_dataset --lsfile_path "DATA/LABEL_STUDIO/LS_BIODIVNER/project-34-at-2025-12-08-13-44-2171ef2d.json" --hf_name "P0L3/BiodivNER-S50-CliReNER" --test_s 0.0 --val_s 0.0
+```
+
 
 **calculate_hf_dataset_stats.py**
 
