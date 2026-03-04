@@ -50,7 +50,7 @@ ANNOTATOR_EXPERT_GROUPS = {
             "labels": {"Body Part", "Chemical", "Disease", "Organism", "Ecosystem"}
         },
         "G5": {
-            "annotators": [11], # Added 11. "???" is ignored.
+            "annotators": [11, 12], # Added 11. "???" is ignored.
             "labels": {"Energy Source", "Meteorological Phenomenon", "Natural Disaster", "Natural Phenomenon"}
         },
         "G6": {

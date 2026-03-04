@@ -374,6 +374,201 @@ def generate_consensus_dataset(list_of_annotator_data, weights=(1.0, 0.7), o_wei
 
     return consensus_dataset
 
+def generate_consistent_label_map(entity_types):
+    """
+    Generates a consistent BIO label map from a set of raw entity types.
+    Ensures 'O' is included and indices are deterministic (sorted).
+    """
+    # 1. Always start with 'O'
+    bio_labels = ["O"]
+    
+    # 2. Create B- and I- tags for every entity type
+    sorted_types = sorted(list(entity_types))
+    for label in sorted_types:
+        bio_labels.append(f"B-{label}")
+        bio_labels.append(f"I-{label}")
+        
+    # 3. Create the dictionary: {'O': 0, 'B-Asset': 1, ...}
+    # We sort the final list to ensure 'O' and the rest are in a predictable order
+    # (Optional: You can enforce 'O' to be 0 specifically, but alphabetical sort is also fine)
+    bio_labels.sort()
+    
+    return {label: i for i, label in enumerate(bio_labels)}
+
+def calculate_single_document_alpha(doc_id, annotator_map, label_map):
+    """
+    Calculates Krippendorff's Alpha for a single document.
+    annotator_map: {annotator_index: doc_data_dict}
+    """
+    if len(annotator_map) < 2:
+        return None  # Cannot calculate alpha with < 2 coders
+    
+    # Get reference tokens
+    first_ann = list(annotator_map.values())[0]
+    tokens = first_ann['tokenized_text']
+    
+    # Prepare matrix: Rows = Annotators, Cols = Tokens
+    # Note: We must map annotator indices to rows 0..N consistently
+    encoded_rows = []
+    
+    for ann_idx, doc_data in annotator_map.items():
+        if len(doc_data['tokenized_text']) != len(tokens):
+            return None # Token mismatch
+        
+        try:
+            tags = spans_to_bio_tags(tokens, doc_data['ner'])
+            encoded_vals = [label_map[t] for t in tags]
+            encoded_rows.append(encoded_vals)
+        except KeyError:
+            return None
+
+    reliability_data = np.array(encoded_rows)
+    
+    # Calculate Alpha
+    # Handle the case where there is NO variance (everyone agrees perfectly)
+    try:
+        alpha = krippendorff.alpha(reliability_data=reliability_data, level_of_measurement="nominal")
+        return alpha
+    except:
+        return 0.0
+
+
+def generate_consensus_dataset_v2(list_of_annotator_data, weights=(1.0, 0.7), o_weight=None, expert_map=None):
+    expert_weight, non_expert_weight = weights
+    final_o_weight = o_weight if o_weight is not None else non_expert_weight
+    if type(expert_map) == type(None):
+        expert_map = get_expert_mapping()
+        
+    # print(expert_map)
+    label_map = generate_consistent_label_map(CLIRENER_LABELS_V1)
+    
+    aligned_docs = defaultdict(dict)
+    for ann_idx, dataset in enumerate(list_of_annotator_data):
+        if dataset is None: continue 
+        for doc in dataset:
+            aligned_docs[doc['id']][ann_idx] = doc
+
+    consensus_dataset = []
+
+    for doc_id, ann_data_map in aligned_docs.items():
+        ref_doc = list(ann_data_map.values())[0]
+        tokens = ref_doc['tokenized_text']
+        doc_len = len(tokens)
+        doc_alpha = calculate_single_document_alpha(doc_id, ann_data_map, label_map)
+        annotator_tags = {}
+        for ann_idx, doc in ann_data_map.items():
+            if len(doc['tokenized_text']) == doc_len:
+                annotator_tags[ann_idx] = spans_to_bio_tags(tokens, doc['ner'])
+        
+        num_raters = len(annotator_tags)
+        final_tags = []
+        token_ties = []
+        token_scores = []
+
+        # =========================================================
+        # 1. Vote per token (Two-Stage Voting)
+        # =========================================================
+        for t_i in range(doc_len):
+            bio_scores = defaultdict(float)      
+            semantic_scores = defaultdict(float) 
+
+            for ann_idx, tags_list in annotator_tags.items():
+                tag = tags_list[t_i]
+                if tag == "O":
+                    w = final_o_weight
+                    label_core = "O"
+                else:
+                    label_core = tag[2:] 
+                    if label_core in expert_map.get(ann_idx, set()):
+                        w = expert_weight
+                    else:
+                        w = non_expert_weight
+                
+                bio_scores[tag] += w
+                semantic_scores[label_core] += w
+            
+            token_scores.append(dict(bio_scores))
+
+            if not semantic_scores:
+                final_tags.append("O")
+                token_ties.append(False)
+                continue
+
+            candidates = list(semantic_scores.items())
+            candidates.sort(key=lambda x: (-x[1], x[0] == "O", x[0]))
+            
+            winning_category = candidates[0][0]
+            
+            is_tie = False
+            if len(candidates) > 1 and candidates[0][1] == candidates[1][1]:
+                is_tie = True
+            token_ties.append(is_tie)
+
+            if winning_category == "O":
+                final_tags.append("O")
+            else:
+                b_tag = f"B-{winning_category}"
+                i_tag = f"I-{winning_category}"
+                # Winner takes all for boundary
+                if bio_scores.get(b_tag, 0.0) >= bio_scores.get(i_tag, 0.0):
+                    final_tags.append(b_tag)
+                else:
+                    final_tags.append(i_tag)
+
+        # =========================================================
+        # 2. Post-process tags (Consistency)
+        # =========================================================
+        cleaned_tags = []
+        for i, tag in enumerate(final_tags):
+            if tag.startswith("I-"):
+                label = tag[2:]
+                prev = cleaned_tags[i-1] if i > 0 else "O"
+                if prev not in [f"B-{label}", f"I-{label}"]:
+                    cleaned_tags.append(f"B-{label}")
+                else:
+                    cleaned_tags.append(tag)
+            else:
+                cleaned_tags.append(tag)
+
+        # =========================================================
+        # 3. Create Spans
+        # =========================================================
+        consensus_spans = bio_tags_to_spans_with_ties(cleaned_tags, token_ties)
+        
+        # 4. ENRICH SPANS WITH VOTE STATS
+        # Adjusted for List Format: [start, end_inclusive, label, tie, stats]
+        for span in consensus_spans:
+            s = span[0]
+            e_inclusive = span[1] # Inclusive
+            
+            span_vote_sum = defaultdict(float)
+            
+            # Use range(s, e + 1) because e is inclusive
+            for t_idx in range(s, e_inclusive + 1):
+                t_scores = token_scores[t_idx]
+                for tag, val in t_scores.items():
+                    clean_lbl = tag[2:] if tag != "O" else "O"
+                    span_vote_sum[clean_lbl] += val
+            
+            # Normalize
+            current_span_len = max(1, (e_inclusive - s) + 1)
+            stats = {k: round(v/current_span_len, 2) for k, v in span_vote_sum.items()}
+            
+            # Append stats as the 5th element
+            span.append(stats)
+
+        consensus_dataset.append({
+            "id": doc_id,
+            "text": ref_doc.get("text", ""),
+            "tokenized_text": tokens,
+            "ner": consensus_spans,
+            "num_raters": num_raters,
+            "alpha": doc_alpha,
+            "scores": token_scores
+        })
+
+    return consensus_dataset
+
 # ==============================================================================
 # 4. DATA LOADING 
 # ==============================================================================
@@ -388,18 +583,18 @@ def load_data_cached():
     # Format: Index: {path, ids, is_dir}
     DATA_CONFIG = {
         0: None, # Explicitly requested as None
-        1:  {"path": "1/G3_19126.json",   "ids": [1, 5]},
+        1:  {"path": "1/G3_10226.json",   "ids": [4, 1, 5]},
         2:  {"path": "2/G4_14126.json",   "ids": [1, 6]},
-        3:  {"path": "3/G4_19126.json",   "ids": [1, 7]},
-        4:  {"path": "4/G2_7126.json",    "ids": [8]},
-        5:  {"path": "5/",                "ids": [9], "is_dir": True},
+        3:  {"path": "3/G4_4326.json",   "ids": [1, 7]},
+        4:  {"path": "4/G2_4326_2.json",    "ids": [1, 8]},
+        5:  {"path": "5/",                "ids": [1, 9], "is_dir": True},
         6:  {"path": "6/G1_15126.json",   "ids": [13]},
         7:  None,
         8:  {"path": "8/G6_7126.json",    "ids": [12]},
-        9:  None,
-        10: {"path": "10/G3_19126.json",  "ids": [1, 15]},
-        11: {"path": "11/G5_19126.json",  "ids": [4, 1, 14]},
-        12: None
+        9:  {"path": "9/G2_4326_1.json",    "ids": [1, 11]},
+        10: {"path": "10/G3_10226_2.json",  "ids": [1, 15]},
+        11: {"path": "11/G5_21126.json",  "ids": [4, 1, 14]},
+        12: {"path": "12/G5_4326.json",  "ids": [4, 1, 2, 3]},
     }
 
     def safe_load(subpath, annotator_ids, is_directory=False):
@@ -529,7 +724,8 @@ def main():
     raw_data_list = load_data_cached()
 
     # --- Run Consensus ---
-    consensus_data = generate_consensus_dataset(
+    
+    consensus_data = generate_consensus_dataset_v2(
         raw_data_list, 
         weights=(exp_w, non_exp_w), 
         o_weight=final_o_w
