@@ -7,8 +7,8 @@ import shutil
 
 # 1. Configuration
 ENTITY = "andrija-2"
-PROJECT = "CLIRENER_GOLD_SEEDS_authorannots"
-OUTPUT_FILE = "clirener_detailed_results.csv"
+PROJECT = "CLIRENER_GOLD_SEEDS"
+OUTPUT_FILE = "clirener_GOLDagg_detailed_results.csv"
 
 # 2. Define the Mapping Dictionary
 MODEL_NAME_MAP = {
