@@ -23,10 +23,10 @@ from EXPERIMENTS.evaluate import (
 SILVER_DATASET_ID = "P0L3/CliReNER_v_1_1_28_SILVER"
 
 # 2. The Dataset used for EVALUATION (The new target)
-GOLD_DATASET_ID = "P0L3/CliReNER_v_1_1_28_GOLD_authorannots"
+GOLD_DATASET_ID = "P0L3/CliReNER_v_1_1_28_GOLD" # _authorannots"
 
 # 3. Target WandB Project
-WANDB_PROJECT = "CLIRENER_GOLD_SEEDS_authorannots"
+WANDB_PROJECT = "CLIRENER_GOLD_SEEDS" # _authorannots"
 
 # 4. Seeds to iterate over
 SEEDS = [0, 42, 3012, 33, 131]
@@ -47,10 +47,10 @@ MODELS_TO_EVALUATE = [
     # ("SPANMARKER", "ESGBERT/EnvironmentalBERT-base"),
     # ("SPANMARKER", "distilbert/distilroberta-base"),
     # ("SPANMARKER", "climatebert/distilroberta-base-climate-f"),
-    ("SPANMARKER", "P0L3/sciclimatebert"),
+    # ("SPANMARKER", "P0L3/sciclimatebert"),
     
     # ("GLINER", "gliner-community/gliner_medium-v2.5"),
-    # ("GLINER", "gliner-community/gliner_small-v2.5")
+    ("GLINER", "gliner-community/gliner_small-v2.5")
 ]
 
 def load_and_merge_gold_data(dataset_id):
