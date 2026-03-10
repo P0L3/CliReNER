@@ -127,7 +127,7 @@ def main():
     parser.add_argument("--challenger_id", type=str, required=True)
     parser.add_argument("--baseline_type", type=str, default="SPANMARKER")
     parser.add_argument("--challenger_type", type=str, default="SPANMARKER")
-    parser.add_argument("--eval_dataset", type=str, default="P0L3/CliReNER_v_1_1_28_GOLD_authorannots")
+    parser.add_argument("--eval_dataset", type=str, default="P0L3/CliReNER_v_1_1_28_GOLD")
     parser.add_argument("--train_dataset", type=str, default="P0L3/CliReNER_v_1_1_28_SILVER")
     parser.add_argument("--output_dir", type=str, default="RESULTS/QUALITATIVE_MODEL_COMPARISON", help="Directory to save the resulting .md file")
     args = parser.parse_args()
