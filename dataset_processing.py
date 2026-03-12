@@ -1074,3 +1074,150 @@ def shorten_name(name):
     name = re.sub(r"[^a-zA-Z0-9]", "_", name)
     name = re.sub(r"_+", "_", name)
     return name.strip("_")
+
+# Stats calc
+
+def calculate_advanced_metrics(dataset_split, label_names):
+    """
+    Calculates advanced content-based metrics for NER datasets.
+    Normalizes metrics by token count rather than document count to handle
+    variable document sizes (sentences vs full papers).
+    """
+    
+    # --- Accumulators ---
+    total_tokens = 0
+    total_docs = 0
+    
+    # Entity Accumulators
+    all_entity_texts = []    # List of strings, e.g., ["carbon dioxide", "Paris", ...]
+    all_span_lengths = []    # List of integers
+    class_counts = Counter()
+    
+    # Structure Accumulators
+    total_entities = 0
+    adjacency_hits = 0       # Entities immediately following another
+    
+    # Pre-check
+    if len(dataset_split) == 0:
+        return None
+
+    for row in dataset_split:
+        tokens = row['tokens']
+        tags = row['ner_tags']
+        
+        doc_len = len(tokens)
+        total_tokens += doc_len
+        total_docs += 1
+        
+        # --- 1. Extract Entities from BIO Tags ---
+        # We need the exact span indices to check adjacency
+        current_entities = [] # Stores (start_index, end_index, label_name, text)
+        
+        i = 0
+        while i < len(tags):
+            tag_id = tags[i]
+            
+            # Skip invalid tags
+            if tag_id < 0 or tag_id >= len(label_names):
+                i += 1
+                continue
+                
+            tag_name = label_names[tag_id]
+            
+            if tag_name.startswith("B-"):
+                start_idx = i
+                class_type = tag_name[2:]
+                
+                # Look ahead for I- tags
+                j = i + 1
+                while j < len(tags):
+                    next_tag_id = tags[j]
+                    if next_tag_id < 0 or next_tag_id >= len(label_names):
+                        break
+                    next_tag_name = label_names[next_tag_id]
+                    if next_tag_name == f"I-{class_type}":
+                        j += 1
+                    else:
+                        break
+                end_idx = j # Exclusive
+                
+                # Capture Entity Details
+                span_text = " ".join(tokens[start_idx:end_idx])
+                span_len = end_idx - start_idx
+                
+                current_entities.append({
+                    "start": start_idx,
+                    "end": end_idx,
+                    "label": class_type,
+                    "text": span_text,
+                    "len": span_len
+                })
+                
+                # Update Loop index
+                i = j 
+            else:
+                i += 1
+
+        # --- 2. Update Aggregates ---
+        for ent in current_entities:
+            all_entity_texts.append(ent['text'])
+            all_span_lengths.append(ent['len'])
+            class_counts[ent['label']] += 1
+            
+        total_entities += len(current_entities)
+
+        # --- 3. Calculate Adjacency (Clumping) for this Doc ---
+        # We check if Entity B starts within 1 token of Entity A ending.
+        # This catches "A, B" (sep by comma) or "A B" (immediate).
+        for k in range(len(current_entities) - 1):
+            prev_end = current_entities[k]['end']
+            next_start = current_entities[k+1]['start']
+            
+            # Gap of 0 means immediate (end 5, start 5). 
+            # Gap of 1 means one separator (end 5, start 6 -> token 5 is sep).
+            gap = next_start - prev_end
+            if gap <= 1: 
+                adjacency_hits += 1
+
+    # --- 4. Final Calculations ---
+    
+    # A. Saturation (Density)
+    # Entities per 100 tokens. Comparable across doc sizes.
+    saturation = (total_entities / total_tokens) * 100 if total_tokens > 0 else 0
+    
+    # B. Vocabulary (TTR)
+    # Are we seeing new things, or the same 5 words repeated?
+    # Lowercase to ensure "Carbon" and "carbon" count as same type.
+    unique_entities = set(t.lower() for t in all_entity_texts)
+    vocab_size = len(unique_entities)
+    ttr = (vocab_size / total_entities) if total_entities > 0 else 0
+    
+    # C. Complexity (Long Spans)
+    # Percentage of entities longer than 4 tokens
+    long_spans = sum(1 for l in all_span_lengths if l >= 5)
+    long_span_ratio = (long_spans / total_entities) * 100 if total_entities > 0 else 0
+    
+    # D. Structure (Adjacency)
+    # What % of entities appear in a list/cluster?
+    adjacency_ratio = (adjacency_hits / total_entities) * 100 if total_entities > 0 else 0
+
+    # E. Class Balance (Normalized Entropy)
+    # 0 = All same class, 1 = Perfectly balanced
+    probs = [count / total_entities for count in class_counts.values()]
+    if len(probs) > 1:
+        entropy = -sum(p * math.log2(p) for p in probs)
+        max_entropy = math.log2(len(probs))
+        normalized_entropy = entropy / max_entropy
+    else:
+        normalized_entropy = 0.0
+
+    return {
+        "Total Tokens": total_tokens,
+        "Total Entities": total_entities,
+        "Saturation (%)": saturation,
+        "Entity TTR (0-1)": ttr,
+        "Avg Span Len": np.mean(all_span_lengths) if all_span_lengths else 0,
+        "Long Spans (>4t) %": long_span_ratio,
+        "Clumping (Adj) %": adjacency_ratio,
+        "Class Entropy (0-1)": normalized_entropy
+    }
