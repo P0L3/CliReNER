@@ -1,6 +1,6 @@
 [![10.1007/s42452-025-07740-5](http://img.shields.io/badge/DOI-10.21203/rs.3.rs-9445054.svg)](https://dx.doi.org/10.21203/rs.3.rs-9445054/v1)
-[![Hugging Face - CliReNER](https://img.shields.io/badge/HuggingFace-CliReNER-blue?logo=huggingface)](https://hf.co/collections/P0L3/clirener)
-[![Hugging Face - CliReNER-Encoders](https://img.shields.io/badge/HuggingFace-CliReNER-Encoders-blue?logo=huggingface)](https://hf.co/collections/P0L3/clirener-encoders)
+[![Hugging Face - CliReNER](https://img.shields.io/badge/HuggingFace-CliReNER_Datasets-blue?logo=huggingface)](https://hf.co/collections/P0L3/clirener)
+[![Hugging Face - CliReNER Models](https://img.shields.io/badge/HuggingFace-CliReNER_Models-blue?logo=huggingface)](https://hf.co/collections/P0L3/clirener-encoders)
 
 
 # CliReNER
@@ -125,6 +125,20 @@ We support fine-tuning for both [GLiNER](https://github.com/urchade/GLiNER) and 
 ### Evaluation
 *   **Gold Standard:** Perform final evaluation on the GOLD dataset using [`EXPERIMENTS/evaluate_gold.py`](EXPERIMENTS/evaluate_gold.py).
 
+## Cite
+```
+@misc{poleksic2026nerclimate,
+  author = {Andrija Poleksi{\'c} and Sanda Martin{\v{c}}i{\'c}-Ip{\v{s}}i{\'c}},
+  title        = {Named Entity Recognition for Climate Change Research},
+  journal      = {Climatic Change: NLP and AI as Climate Solutions (Under Reiview)},
+  year         = {2026},
+  month        = may,
+  note         = {Preprint (Version 1), Research Square},
+  doi          = {10.21203/rs.3.rs-9445054/v1},
+  url          = {https://doi.org/10.21203/rs.3.rs-9445054/v1}
+}
+```
+
 ## ✅ Roadmap / To Do
 
 - [x] ~~Unify GLiNER and SPANMARKER finetuning procedure.~~
@@ -132,7 +146,7 @@ We support fine-tuning for both [GLiNER](https://github.com/urchade/GLiNER) and 
   - [x] ~~Add SEED option to finetuning (reproducibility).~~
   - [x] ~~Add WANDB wrapper for monitoring.~~
 - [x] ~~Add useful outputs for WANDB visualization~~
-- [ ] Update Dataset card for `CLIRENER_V_1_0_28`
-- [ ] Correct experiment configs for SILVER experiment
+- [x] Update Dataset card for `CLIRENER_V_1_0_28`
+- [x] Correct experiment configs for SILVER experiment
 - [ ] Extend [`annotator_stats`](annotator_stats.ipynb) with multi-annotator agreement calculations.
 - [ ] Create auto script reporting based on [`annotator_stats`](annotator_stats.ipynb).
