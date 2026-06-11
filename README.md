@@ -1,3 +1,8 @@
+[![10.1007/s42452-025-07740-5](http://img.shields.io/badge/DOI-10.21203/rs.3.rs-9445054.svg)](https://dx.doi.org/10.21203/rs.3.rs-9445054/v1)
+[![Hugging Face - CliReNER](https://img.shields.io/badge/HuggingFace-CliReNER-blue?logo=huggingface)](https://hf.co/collections/P0L3/clirener)
+[![Hugging Face - CliReNER-Encoders](https://img.shields.io/badge/HuggingFace-CliReNER-Encoders-blue?logo=huggingface)](https://hf.co/collections/P0L3/clirener-encoders)
+
+
 # CliReNER
 **Cli**mate **Re**search **N**amed **E**ntity **R**ecognition
 

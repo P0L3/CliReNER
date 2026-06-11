@@ -39,3 +39,6 @@
 # Specific ignores
 not_to_upload.txt
 mace.py
+llm_input.txt
+llm_output.txt
+Untitled-1.md
