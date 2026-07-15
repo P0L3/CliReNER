@@ -11,6 +11,9 @@ import pandas as pd
 import json
 import os
 
+from dataset_processing import hf_dataset_to_gliner_format
+from EXPERIMENTS.evaluate_gold import load_and_merge_gold_data
+
 # Ensure target directories exist locally
 os.makedirs("PLOTS", exist_ok=True)
 os.makedirs("RESULTS", exist_ok=True)
@@ -31,6 +34,7 @@ data_referent_silver = list({d['id']: d for d in data_referent_silver}.values())
 
 
 # --- Loading the Individual Coder Datasets ---
+
 ANNOTATOR_DIR = "/home/p0l3/RAD/DROP/CLIRENER/ANNOTATORS/"
 data_0 = convert_to_token_spans(cwed4eta_process_json_file(ANNOTATOR_DIR + "0/" + "OG.json"))
 data_1 = convert_to_token_spans(cwed4eta_process_json_file(ANNOTATOR_DIR + "1/" + "G3_10226.json", [4, 1, 5]))
@@ -48,6 +52,12 @@ data_11 = convert_to_token_spans(cwed4eta_process_json_file(ANNOTATOR_DIR + "11/
 # Corrected loading logic for data_12
 with open(ANNOTATOR_DIR + "12/" + "G5_4326.json", "r") as f:
     data_12 = json.load(f)
+
+
+print("Loading and merging Gold dataset from HF...")
+# dataset_hf = load_and_merge_gold_data("P0L3/CliReNER_v_1_1_28_GOLD")
+# data_gold_merged = hf_dataset_to_gliner_format(dataset_hf[0]["test"], dataset_hf[1])
+data_gold_merged = convert_to_token_spans(cwed4eta_process_json_file(ANNOTATOR_DIR + "CONSENSUS/" + "6326.json", [1]))
 
 
 def _unpack(span):
@@ -186,6 +196,15 @@ for label, ann_data in expert_annotators.items():
         for k in pool:
             pool[k] += s[k]
 
+gold_merged_stats = calculate_span_modification_rate(data_gold_merged, data_referent_gold)
+if gold_merged_stats:
+    row_merged = gold_merged_stats.copy()
+    row_merged['Annotator'] = 'Gold Merged'
+    row_merged['Reference'] = 'Gold Reference'
+    records.append(row_merged)
+else:
+    print("WARNING: no ID overlap between Gold Merged dataset and Gold Reference -- check alignment.")
+
 df = pd.DataFrame(records)
 
 
@@ -316,4 +335,44 @@ $$\text{Deletion Rate} = \frac{S_{\text{deleted}}}{M_{\text{total}}}$$
 $$\text{Addition Rate} = \frac{S_{\text{added}}}{M_{\text{total}}}$$
 *   **Definition:** The volume of entirely new entity spans manually introduced by the annotator (which did not overlap with any model suggestions), normalized by the total number of suggestions generated [3].
 *   **Scientific Context:** The Addition Rate highlights the omissions and false-negative trends of the pre-annotation model (recall gaps) [3]. A high Addition Rate shows where the pre-annotation model failed to capture target entities, forcing human annotators to find and tag them from scratch.
+"""
+
+
+"""
+MATHEMATICAL INTERACTION BETWEEN THE METRICS:
+
+The metrics computed in this workflow do not sum to 100% horizontally 
+due to differing denominators and unbounded scopes. Instead, they interact 
+through two distinct mathematical partitions and an algebraic derivation.
+
+1. Partitioning the Model Suggestions (Denominator: total_model_spans)
+   Every pre-annotation span suggested by the model falls into exactly one 
+   of three mutually exclusive outcomes during human review:
+     - Accepted with exact boundaries (exact_matches)
+     - Retained, but boundaries were resized (modified_boundaries)
+     - Rejected/deleted completely (deleted_by_annotator)
+   
+   Dividing these counts by total_model_spans yields:
+     Acceptance Rate + Global Modification Rate + Deletion Rate = 100%
+     (where "Global Modification Rate" is modified_boundaries / total_model_spans)
+
+2. The Exact Algebraic Interplay (Deriving BMR from AR and DR)
+   The Boundary Modification Rate (BMR) uses a conditional denominator 
+   focusing only on retained spans (exact_matches + modified_boundaries), 
+   excluding deleted spans. Consequently, BMR can be derived algebraically 
+   from the Acceptance Rate (AR) and the Deletion Rate (DR):
+   
+     BMR = (1 - AR - DR) / (1 - DR)
+     
+   Implications of this equation:
+     - The term (1 - DR) represents the active pool of retained spans.
+     - If DR = 0% (the annotator rejected nothing), the relationship 
+       simplifies cleanly to: BMR = 1 - AR.
+
+3. Addition Rate Independence
+   The Addition Rate measures human-initiated annotations (added_by_annotator)
+   that have no counterpart in the pre-annotation output, normalized by the 
+   total suggested spans. Because it is independent of the model's suggestion 
+   disposition, it is unbounded and can exceed 100% if the annotator introduces 
+   more new spans than the model originally suggested.
 """
