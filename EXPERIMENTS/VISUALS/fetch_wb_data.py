@@ -7,8 +7,8 @@ import shutil
 
 # 1. Configuration
 ENTITY = "andrija-2"
-PROJECT = "CLIRENER_GOLD_SEEDS"
-OUTPUT_FILE = "clirener_GOLDagg_detailed_results.csv"
+PROJECT = "CLIRENER_GOLD_SEEDS" # "CLIRENER_COMBINED_EVAL"
+OUTPUT_FILE = "clirener_GOLD_detailed_results.csv" # "clirener_COMBINED_detailed_results.csv"
 
 # 2. Define the Mapping Dictionary
 MODEL_NAME_MAP = {
@@ -40,7 +40,7 @@ MODEL_NAME_MAP = {
 def clean_model_name(run_name):
     # Remove '_s' followed by digits at end, and 'eval_GOLD_' prefix
     raw_key = re.sub(r'_s\d+$', '', run_name)
-    raw_key = raw_key.replace('eval_GOLD_', '')
+    raw_key = raw_key.replace('eval_GOLD_', '')# ('eval_COMBINED_', '')
     return raw_key
 
 def main():

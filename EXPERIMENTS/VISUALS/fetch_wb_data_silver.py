@@ -8,7 +8,7 @@ import shutil
 # 1. Configuration
 ENTITY = "andrija-2"
 PROJECT = "CLIRENER_SILVER_SEEDS"  # Updated Project Name
-OUTPUT_FILE = "clirener_silver_detailed_results.csv"
+OUTPUT_FILE = "clirener_SILVER_detailed_results.csv"
 
 # 2. Define the Mapping Dictionary (Extracted from Vega-Lite Spec)
 MODEL_NAME_MAP = {
@@ -21,8 +21,8 @@ MODEL_NAME_MAP = {
     'DistilRoBERTa': 'Distil RoBERTa',
     'distilroberta_base_climate_f': 'ClimateBERT',
     'sciclimatebert': 'SciClimateBERT',
-    'gliner_medium_v2_5': 'GLiNER: Medium v2.5',
-    'gliner_small_v2_5': 'GLiNER: Small v2.5',
+    'GLiNER_Medium': 'GLiNER: Medium v2.5',
+    'GLiNER_Small': 'GLiNER: Small v2.5',
     'ZS_gliner_medium_v2_5': 'GLiNER: Medium v2.5 ZS',
     'ZS_gliner_small_v2_5': 'GLiNER: Small v2.5 ZS',
     'gpt_5_2_pro_zs': 'GPT 5.2 Pro ZS',
@@ -34,7 +34,7 @@ MODEL_NAME_MAP = {
     'claude_sonnet_4_5_zs': 'Claude Sonnet 4.5 ZS',
     'claude_opus_4_5_zs': 'Claude Opus 4.5 ZS',
     'INDUSbase': 'INDUS Base',
-    'INDUSbaseSDE': 'INDUS SDE Base'
+    'INDUSbaseSDE': 'INDUS SDE v0.2'
 }
 
 def clean_model_name(run_name):
