@@ -5,7 +5,7 @@ conda create -n clirener_finetune python=3.10
 conda activate clirener_finetune
 
 # GLiNER part (conda installs)
-conda install gliner accelerate seqeval datasets -y
+conda install conda-forge::gliner accelerate seqeval datasets -y
 conda install pip -y
 
 # SpanMarker part (pip installs)
@@ -23,6 +23,7 @@ pip install wandb
 pip install nervaluate 
 pip install multiset-multicover
 pip install krippendorff
+pip install scikit-multilearn
 
 pip install spacy==3.7.5
 ```
