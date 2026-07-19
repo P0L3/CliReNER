@@ -31,42 +31,29 @@ def main():
 
     total_input_tokens = 0
     total_output_tokens = 0
-    num_sentences = 0
-    
+    num_success = 0
+    num_total = 0
+
     with open(llm_file, 'r', encoding='utf-8') as f:
         for line in f:
             if not line.strip(): continue
             task = json.loads(line)
-            
-            # Input = System Prompt + Sentence
+            num_total += 1
+
             sentence = task.get("input_text", "")
-            sent_tokens = len(enc.encode(sentence))
-            total_input_tokens += (sys_tokens + sent_tokens)
-            
-            # Output = Raw JSON Response
+            total_input_tokens += sys_tokens + len(enc.encode(sentence))  # every attempt costs input
+
             response = task.get("raw_llm_response", "")
             if response:
                 total_output_tokens += len(enc.encode(response))
-            
-            num_sentences += 1
-            
-    avg_input = total_input_tokens / num_sentences
-    avg_output = total_output_tokens / num_sentences
-    
-    print("\n" + "="*50)
-    print(f"📊 GEMINI 3.0 PRO TOKEN APPROXIMATION (Over {num_sentences} sentences)")
-    print("="*50)
-    print(f"Average Input Tokens per Call:  {avg_input:.0f}")
-    print(f"Average Output Tokens per Call: {avg_output:.0f}")
-    print(f"\nCost per 1M Input: $2.00 | Cost per 1M Output: $12.00")
-    
-    # Calculate projection for 28.4 Million sentences
-    cost_input = (avg_input / 1_000_000) * 2.00 * 28_400_000
-    cost_output = (avg_output / 1_000_000) * 12.00 * 28_400_000
-    total_cost = cost_input + cost_output
-    
-    print(f"Estimated Cost for 28.4M sentences: ${total_cost:,.2f}")
-    print("="*50)
+                num_success += 1
+
+    cost_to_obtain_success = (total_input_tokens/1e6)*2.00 + (total_output_tokens/1e6)*12.00
+    cost_per_successful_sentence = cost_to_obtain_success / num_success
+    total_cost = cost_per_successful_sentence * 28_400_000
+
+    print(f"Attempts: {num_total}, Successes: {num_success}, Retry rate: {(num_total-num_success)/num_total:.1%}")
+    print(f"Estimated cost for 28.4M sentences: ${total_cost:,.2f}")
 
 if __name__ == "__main__":
     main()
