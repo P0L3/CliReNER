@@ -1221,3 +1221,54 @@ def calculate_advanced_metrics(dataset_split, label_names):
         "Clumping (Adj) %": adjacency_ratio,
         "Class Entropy (0-1)": normalized_entropy
     }
+
+
+# ---------------- GLINER2 PARSING
+def char_spans_to_gliner2_examples(structured_docs, min_text_len=1, keep_empty=False):
+    """
+    Converts [{"text", "entities":[{"text","label","start","end"}, ...]}, ...]
+    into GLiNER2 training rows: {"text": ..., "entities": {label: [text, ...]}}
+ 
+    Entities are grouped by label per sentence. Duplicate (label, text) pairs
+    within one sentence are kept as-is -- GLiNER2 matches spans by searching
+    the text, so repeats simply reinforce a repeated mention.
+ 
+    keep_empty=True retains sentences with zero entities (entities: {}) as
+    implicit negatives; default drops them.
+    """
+    examples = []
+    skipped_empty_text = 0
+    skipped_no_entities = 0
+ 
+    for doc in structured_docs:
+        text = doc["text"].strip()
+        if len(text) < min_text_len:
+            skipped_empty_text += 1
+            continue
+ 
+        if not doc["entities"]:
+            if keep_empty:
+                examples.append({"text": text, "entities": {}})
+            else:
+                skipped_no_entities += 1
+            continue
+ 
+        label_map = defaultdict(list)
+        for ent in doc["entities"]:
+            ent_text = ent["text"].strip()
+            if ent_text:
+                label_map[ent["label"]].append(ent_text)
+ 
+        if not label_map:
+            if keep_empty:
+                examples.append({"text": text, "entities": {}})
+            else:
+                skipped_no_entities += 1
+            continue
+ 
+        examples.append({"text": text, "entities": dict(label_map)})
+ 
+    print(f"  -> {len(examples)} examples kept "
+          f"(skipped {skipped_empty_text} empty-text, {skipped_no_entities} no-entity)")
+    return examples
+
