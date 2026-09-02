@@ -32,6 +32,7 @@ from pathlib import Path
 
 import uuid
 
+import random
 ANNOTATOR_EXPERT_GROUPS = {
         "G1": {
             "annotators": [5, 6],
@@ -1228,46 +1229,58 @@ def char_spans_to_gliner2_examples(structured_docs, min_text_len=1, keep_empty=F
     """
     Converts [{"text", "entities":[{"text","label","start","end"}, ...]}, ...]
     into GLiNER2 training rows: {"text": ..., "entities": {label: [text, ...]}}
- 
-    Entities are grouped by label per sentence. Duplicate (label, text) pairs
-    within one sentence are kept as-is -- GLiNER2 matches spans by searching
-    the text, so repeats simply reinforce a repeated mention.
- 
-    keep_empty=True retains sentences with zero entities (entities: {}) as
-    implicit negatives; default drops them.
+    
+    For examples WITH entities, they are left as-is (no empty types added).
+    For examples WITHOUT entities (if keep_empty=True), a single randomly 
+    sampled entity type from the dataset's label pool is assigned an empty list [].
     """
+    # 1. Determine the pool of labels for this specific dataset
+    dataset_labels = set()
+    for doc in structured_docs:
+        for ent in doc.get("entities", []):
+            dataset_labels.add(ent["label"])
+            
+    # Convert to list for random sampling
+    dataset_labels_list = list(dataset_labels)
+    
     examples = []
     skipped_empty_text = 0
     skipped_no_entities = 0
- 
+
     for doc in structured_docs:
         text = doc["text"].strip()
         if len(text) < min_text_len:
             skipped_empty_text += 1
             continue
- 
-        if not doc["entities"]:
+
+        # If the document has absolutely no entities initially
+        if not doc.get("entities"):
             if keep_empty:
-                examples.append({"text": text, "entities": {}})
+                # Fallback to "O" just in case a dataset is completely empty, though unlikely
+                sampled_label = random.choice(dataset_labels_list) if dataset_labels_list else "Unknown"
+                examples.append({"text": text, "entities": {sampled_label: []}})
             else:
                 skipped_no_entities += 1
             continue
- 
+
         label_map = defaultdict(list)
         for ent in doc["entities"]:
             ent_text = ent["text"].strip()
             if ent_text:
                 label_map[ent["label"]].append(ent_text)
- 
+
+        # If entities existed but were entirely empty strings (rare edge case)
         if not label_map:
             if keep_empty:
-                examples.append({"text": text, "entities": {}})
+                sampled_label = random.choice(dataset_labels_list) if dataset_labels_list else "Unknown"
+                examples.append({"text": text, "entities": {sampled_label: []}})
             else:
                 skipped_no_entities += 1
             continue
- 
+
+        # Normal case: keep exactly as is, do not add empty types
         examples.append({"text": text, "entities": dict(label_map)})
- 
+
     print(f"  -> {len(examples)} examples kept "
           f"(skipped {skipped_empty_text} empty-text, {skipped_no_entities} no-entity)")
     return examples

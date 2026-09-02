@@ -8,8 +8,6 @@ from nervaluate import Evaluator
 from dataset_processing import transform_to_ner_format, CLIRENER_LABELS_V1
 
 # Import model specifics
-from gliner import GLiNER
-from span_marker import SpanMarkerModel
 
 def ids_to_labels(pred_id_seqs, label_list):
     """
@@ -21,6 +19,9 @@ def evaluate_gliner(model_path, dataset, labels, device):
     """
     Run inference using GLiNER model.
     """
+
+    from gliner import GLiNER
+
     print(f"--- Loading GLiNER model from {model_path} ---")
     model = GLiNER.from_pretrained(model_path)
     model.to(device)
@@ -45,6 +46,9 @@ def evaluate_spanmarker(model_path, dataset, labels, device):
     """
     Run inference using SpanMarker model.
     """
+
+    from span_marker import SpanMarkerModel
+
     print(f"--- Loading SpanMarker model from {model_path} ---")
     # SpanMarker handles device automatically usually, but good to be explicit if needed
     model = SpanMarkerModel.from_pretrained(model_path)

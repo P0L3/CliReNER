@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MODEL="gliner-community/gliner_medium-v2.5"
+MODEL="EXPERIMENTS/models/GLINER_CUSTOM/clirebert_clirevocab_uncased/stage2_s301202/checkpoint-final"
 DATA="P0L3/CliReNER_v_1_1_28_SILVER"
 CONFIG="EXPERIMENTS/gliner_config.json"
 PROJECT="CLIRENER_SILVER_SEEDS"

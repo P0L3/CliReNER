@@ -50,7 +50,8 @@ MODELS_TO_EVALUATE = [
     # ("SPANMARKER", "P0L3/sciclimatebert"),
     
     # ("GLINER", "gliner-community/gliner_medium-v2.5"),
-    ("GLINER", "gliner-community/gliner_small-v2.5")
+    # ("GLINER", "gliner-community/gliner_small-v2.5")
+    ("GLINER", "checkpoint_final")
 ]
 
 def load_and_merge_gold_data(dataset_id):

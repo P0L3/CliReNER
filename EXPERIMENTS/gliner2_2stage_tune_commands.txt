@@ -1,0 +1,5 @@
+python -m EXPERIMENTS.gliner2_2stage_tune --config_path EXPERIMENTS/gliner2_2stage_tune_config.json --stage1_data FINETUNES/GLINER/pilener_2025.jsonl --check_data_only
+
+python -m EXPERIMENTS.gliner2_2stage_tune --config_path EXPERIMENTS/gliner2_2stage_tune_config.json --stages 1 --smoke_test
+
+python -m EXPERIMENTS.gliner2_2stage_tune --config_path EXPERIMENTS/gliner2_2stage_tune_config.json --stages 1,2 --wandb_project clirener-gliner2-2stage
