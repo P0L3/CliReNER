@@ -97,12 +97,12 @@ except Exception:
 # =====================================================================
 
 BACKBONE_MODEL = "P0L3/clirebert_clirevocab_uncased"   # only used for Stage 1 cold start
-RUN_NAME = None                                        # None -> shorten_name(BACKBONE_MODEL)
+RUN_NAME = "clirebert_clirevocab_uncased_6estage1"                                   # None -> shorten_name(BACKBONE_MODEL)
 
 STAGE1_DATA = "./FINETUNES/GLINER/pilener_2025_gliner.json"
 STAGE2_DATA = "./FINETUNES/GLINER/pile_ccner_2025_gliner.json"
 
-RUN_STAGES = [1, 2]          # subset e.g. [2] to resume from an existing stage-1 checkpoint
+RUN_STAGES = [2]          # subset e.g. [2] to resume from an existing stage-1 checkpoint
 OUTPUT_BASE = Path("EXPERIMENTS/models/GLINER_CUSTOM")
 SEED = 301202
 
@@ -116,7 +116,7 @@ INIT_FROM_CHECKPOINT = None
 CHECK_DATA_ONLY = False       # True: just load/count the JSON files, no torch/gliner import
 SMOKE_TEST = False            # True: 20 train / 10 eval samples, 1 epoch, no eval, no wandb
 
-MAX_SUBWORD_TOKENS = 290 
+MAX_SUBWORD_TOKENS = 270 
 
 # GLiNER model_cfg fixed fields (hidden_size is filled in at runtime via
 # AutoConfig, since GLiNERConfig does not auto-sync it -- see docstring)
@@ -150,7 +150,7 @@ STAGE_CONFIG = {
             "per_device_eval_batch_size": 16,
             "gradient_accumulation_steps": 1,
             "fp16": True,                        # Enabled from JSON
-            "num_train_epochs": 3,               # Translated from num_epochs
+            "num_train_epochs": 6, # 3,               # Translated from num_epochs
             "eval_strategy": "epoch",            # Matched from JSON
             "save_strategy": "epoch",            # Must match eval_strategy for load_best_model
             "save_total_limit": 2,
