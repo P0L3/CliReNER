@@ -96,13 +96,13 @@ except Exception:
 # Configuration Variables (edit these directly instead of CLI args)
 # =====================================================================
 
-BACKBONE_MODEL = "P0L3/clirebert_clirevocab_uncased"   # only used for Stage 1 cold start
-RUN_NAME = "clirebert_clirevocab_uncased_6estage1"                                   # None -> shorten_name(BACKBONE_MODEL)
+BACKBONE_MODEL = "P0L3/cliscibert_scivocab_uncased" # "P0L3/clirebert_clirevocab_uncased"   # only used for Stage 1 cold start
+RUN_NAME = "cliscibert_scivocab_uncased_6estage1"                                   # None -> shorten_name(BACKBONE_MODEL)
 
 STAGE1_DATA = "./FINETUNES/GLINER/pilener_2025_gliner.json"
 STAGE2_DATA = "./FINETUNES/GLINER/pile_ccner_2025_gliner.json"
 
-RUN_STAGES = [2]          # subset e.g. [2] to resume from an existing stage-1 checkpoint
+RUN_STAGES = [1, 2]          # subset e.g. [2] to resume from an existing stage-1 checkpoint
 OUTPUT_BASE = Path("EXPERIMENTS/models/GLINER_CUSTOM")
 SEED = 301202
 
