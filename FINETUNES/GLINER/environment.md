@@ -18,4 +18,4 @@ pip install "transformers<=4.50.0"
 conda install -n clirener_finetune_gliner ipykernel --update-deps --force-reinstall -y
 # conda install matplotlib scikit-multilearn seqeval -y
 # pip install wandb nervaluate multiset-multicover spacy==3.7.5
-pip install spacy scispacy matplotlib scikit-multilearn peft wandb nervaluate
+pip install spacy scispacy matplotlib scikit-multilearn peft wandb==0.23.0 nervaluate

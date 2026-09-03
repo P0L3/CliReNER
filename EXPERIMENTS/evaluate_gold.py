@@ -51,7 +51,7 @@ MODELS_TO_EVALUATE = [
     
     # ("GLINER", "gliner-community/gliner_medium-v2.5"),
     # ("GLINER", "gliner-community/gliner_small-v2.5")
-    ("GLINER", "checkpoint_final")
+    ("GLINER", "GLiNER_CliSciBERT")
 ]
 
 def load_and_merge_gold_data(dataset_id):

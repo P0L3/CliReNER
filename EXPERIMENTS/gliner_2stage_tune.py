@@ -369,6 +369,8 @@ def run_stage(stage_num, model, stage_cfg, data_path, output_dir, seed,
     else:
         train_params["report_to"] = "wandb" if wandb_project else "none"
     train_params["seed"] = seed
+    train_params["dataloader_drop_last"] = True
+
 
     training_args = GlinerArgs(output_dir=str(output_dir), **train_params)
 
