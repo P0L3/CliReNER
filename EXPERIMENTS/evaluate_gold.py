@@ -56,7 +56,8 @@ MODELS_TO_EVALUATE = [
     # ("GLINER", "GLiNER_CliReBERT_6es1")
     # ("GLINER", "GLiNER_CliReBERT")
     # ("GLINER", "GLiNER_CliReBERT_6es1_12es2")
-    ("GLINER", "GLiNER_CliSciBERT_6es1")
+    # ("GLINER", "GLiNER_CliSciBERT_6es1")
+    ("GLINER", "GLiNER_CliReBERT_6es1_0es2")
 ]
 
 def load_and_merge_gold_data(dataset_id):
