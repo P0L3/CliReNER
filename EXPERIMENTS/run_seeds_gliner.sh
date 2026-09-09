@@ -1,10 +1,10 @@
 #!/bin/bash
 
-MODEL="EXPERIMENTS/models/GLINER_CUSTOM/clirebert_clivocab_uncased_flips_3es1_6es2/stage2_s301202/GLiNER_CliReBERT_flips_3es1_6es2"
+MODEL="EXPERIMENTS/models/GLINER_CUSTOM/clirebert_clivocab_uncased_flips_3es1_6es2/stage1_s301202/GLiNER_CliReBERT_flips_3es1_0es2"
 DATA="P0L3/CliReNER_v_1_1_28_SILVER"
 CONFIG="EXPERIMENTS/gliner_config.json"
 PROJECT="CLIRENER_SILVER_SEEDS"
-BASE_NAME="GLiNER_CliReBERT_flips_3es1_6es2"
+BASE_NAME="GLiNER_CliReBERT_flips_3es1_0es2"
 
 # Loop through seeds 
 for SEED in 0 42 3012 33 131
