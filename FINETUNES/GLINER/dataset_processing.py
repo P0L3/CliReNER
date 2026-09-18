@@ -28,6 +28,36 @@ import datasets
 from sklearn.preprocessing import MultiLabelBinarizer
 from skmultilearn.model_selection import iterative_train_test_split
 
+from pathlib import Path
+
+import uuid
+
+ANNOTATOR_EXPERT_GROUPS = {
+        "G1": {
+            "annotators": [5, 6],
+            "labels": {"Asset", "Policy", "Objective", "Method", "Field of Study", "Intellectual Artefact"}
+        },
+        "G2": {
+            "annotators": [4, 9],
+            "labels": {"Location", "Geographical Feature", "Body of Water", "Time Period", "Satellite"}
+        },
+        "G3": {
+            "annotators": [1, 10],
+            "labels": {"Mathematical Expression", "Measuring Device", "Physical Phenomenon", "Quantity"}
+        },
+        "G4": {
+            "annotators": [2, 3],
+            "labels": {"Body Part", "Chemical", "Disease", "Organism", "Ecosystem"}
+        },
+        "G5": {
+            "annotators": [11, 12], # Added 11. "???" is ignored.
+            "labels": {"Energy Source", "Meteorological Phenomenon", "Natural Disaster", "Natural Phenomenon"}
+        },
+        "G6": {
+            "annotators": [7, 5, 8], # Note: Annotator 5 appears here too
+            "labels": {"Physical Artefact", "Organization", "Person", "System"}
+        }
+    }
 
 
 # ---------------- DATA CONFIGS
@@ -44,6 +74,13 @@ BIODIVNER_DIR = "/home/p0l3/RAD/CWED4ETA/CWED4ETA/CWED4ETA/DATA/BiodivNER"# "C:\
 BIODIVNER_LABELS = {
     'Quality', 'Phenomena', 'Organism',
     'Matter', 'Location', 'Environment'
+}
+
+CLIMATEIE_LABELS = {
+    'variable', 'project', 'location',
+    'model', 'provider', 'instrument',
+    'event', 'weather event', 'natural hazard',
+    'ocean circulation', 'teleconnection'
 }
 
 CLIRENER_DIR = "C:\\Users\\ANDRIJA_RAD\\CWED4ETA\\CWED4ETA\\DATA\\CWED4ETA\\project-6-at-2025-10-15-07-02-c3e9e3bf.json" # PC2 
@@ -152,8 +189,8 @@ def biodivner_process_bio_documents(data_dir: str, labels_to_keep: Set[str], spl
     
     # Process each CSV file in the directory
     for file_name in csv_files:
-        if "test" in file_name:
-            continue
+        # if "test" in file_name:
+        #     continue
         file_path = os.path.join(data_dir, file_name)
         print(f"Processing file: {file_path}...")
         
@@ -210,26 +247,31 @@ def biodivner_process_bio_documents(data_dir: str, labels_to_keep: Set[str], spl
     return all_processed_sentences
 
 
-
 def cwed4eta_process_json_file(file_path = CLIRENER_DIR, annotator_importance = CLIRENER_ANNOTATOR_IMPORTANCE): 
     with open(file_path) as f:
         json_string = json.load(f)
     
     dataset = []
     for task in json_string:
-        if not task.get('annotations'):
-            continue
-        selected_annotations = None
-        annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in annotator_importance:
-            if annotator_id in annotations_by_id:
-                # If the preferred annotator is found, select their annotations and stop searching
-                selected_annotations = annotations_by_id[annotator_id].get('result', [])
-                break
+        if type(annotator_importance) != type(CLIRENER_ANNOTATOR_IMPORTANCE):
+            predictions = task.get('predictions')
+            selected_annotations = [p.get('result') for p in predictions][0]
+        else:
+            if not task.get('annotations'):
+                continue
+            selected_annotations = None
+            annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
+            
+            for annotator_id in annotator_importance:
+                if annotator_id in annotations_by_id:
+                    # If the preferred annotator is found, select their annotations and stop searching
+                    selected_annotations = annotations_by_id[annotator_id].get('result', [])
+                    break
 
-        if selected_annotations is None:
-            continue
+            if selected_annotations is None:
+                continue
+        
             
         text = task["data"]["sentence"]
         
@@ -261,6 +303,34 @@ def cwed4eta_process_json_file(file_path = CLIRENER_DIR, annotator_importance = 
         )
         
     return dataset
+
+def process_directory_of_json_files(directory_path, annotator_importance_list):
+    json_files = [file for file in os.listdir(directory_path) if file.endswith("json")]
+    
+    compound_json = []
+    
+    for file in json_files:
+        compound_json.extend(cwed4eta_process_json_file(str(Path(directory_path + file)), annotator_importance_list))
+        
+    return compound_json
+
+def generate_consistent_label_map(entity_types):
+    """
+    Generates a consistent BIO label map from a set of raw entity types.
+    Ensures 'O' is included and indices are deterministic (sorted).
+    """
+    # 1. Always start with 'O'
+    bio_labels = ["O"]
+    
+    # 2. Create B- and I- tags for every entity type
+    sorted_types = sorted(list(entity_types))
+    for label in sorted_types:
+        bio_labels.append(f"B-{label}")
+        bio_labels.append(f"I-{label}")
+        
+    
+    return {label: i for i, label in enumerate(bio_labels)}
+
 
 # ---------------- PREPROCESSING
 def tokenize_text(text):
@@ -324,12 +394,13 @@ def convert_to_token_spans(structured_docs_with_char_spans):
         if "id" in doc:
             final_data.append({
                 "id": id,
+                "text": text,
                 "tokenized_text": new_tokens,
                 "ner": doc_entities_token_spans
             })
         else:
             final_data.append({
-                # "text": text,
+                "text": text,
                 "tokenized_text": new_tokens,
                 "ner": doc_entities_token_spans
             })
@@ -581,7 +652,8 @@ def transform_to_ner_format(dataset, labels):
     for label in sorted_labels:
         bio_tags.append(f"B-{label}")
         bio_tags.append(f"I-{label}")
-        
+    
+    
     # Create the mapping from tag string to integer ID
     tag_to_id = {tag: i for i, tag in enumerate(bio_tags)}
     id_for_o = tag_to_id["O"]
@@ -637,7 +709,8 @@ def transform_to_ner_format(dataset, labels):
         ner_tags = [tag_to_id.get(tag, id_for_o) for tag in ner_tags_str]
         
         transformed_data.append({
-            'id': str(i),
+            'id': entry.get('id', str(i)),   # was: 'id': str(i),
+            'text': text,
             'tokens': tokens,
             'ner_tags': ner_tags
         })
@@ -706,88 +779,127 @@ def hf_dataset_to_gliner_format(hf_dataset_split, label_names):
         
     return transformed_data
 
+import numpy as np
+import datasets
+from sklearn.preprocessing import MultiLabelBinarizer
+# Ensure you have skmultilearn installed: pip install scikit-multilearn
+from skmultilearn.model_selection import iterative_train_test_split
+
 def ner_dataset_to_hf_format(transformed_dataset, tag_to_id, test_size=0.1, val_size=0.1):
     """
-    Takes a list of NER data, performs a multi-label stratified split,
-    and returns a Hugging Face DatasetDict.
+    Takes a list of NER data, performs a multi-label stratified split 
+    (handling cases where val or test sizes are 0), and returns a 
+    Hugging Face DatasetDict.
 
     Args:
         transformed_dataset (list): The list of {'id', 'tokens', 'ner_tags'} dicts.
         tag_to_id (dict): The mapping from string tags to integer IDs.
-        test_size (float): The proportion of the dataset to include in the test split.
-        val_size (float): The proportion of the dataset to include in the validation split.
+        test_size (float): The proportion for the test split (can be 0.0).
+        val_size (float): The proportion for the validation split (can be 0.0).
 
     Returns:
         datasets.DatasetDict: The final dataset ready for use with Hugging Face.
     """
 
+    # Basic input validation
+    if test_size + val_size >= 1.0:
+        raise ValueError("Sum of test_size and val_size must be less than 1.0 to leave room for training data.")
+
     # --- 1. Prepare for Stratification ---
     id_to_tag = {i: tag for tag, i in tag_to_id.items()}
 
-    # Extract base entity types per sentence (e.g., "Chemical", "Organism")
+    # Extract base entity types per sentence for stratification
     sentence_labels = []
     for entry in transformed_dataset:
         labels = set()
         for tag_id in entry["ner_tags"]:
-            tag_name = id_to_tag[tag_id]
+            tag_name = id_to_tag.get(tag_id, "O")
             if tag_name != "O":
-                base_label = tag_name.split("-")[1]
+                # Assuming BIO format (e.g., B-PER -> PER)
+                base_label = tag_name.split("-")[1] if "-" in tag_name else tag_name
                 labels.add(base_label)
         sentence_labels.append(list(labels))
 
-    # Binarize labels for stratification
+    # Binarize labels
     mlb = MultiLabelBinarizer()
     y = mlb.fit_transform(sentence_labels)
+    
+    # Ensure y is 2D even if empty or single label
     if y.ndim == 1:
         y = y.reshape(-1, 1)
 
-    # We'll split on indices, not data itself
+    # Indices to split
     X = np.arange(len(transformed_dataset)).reshape(-1, 1)
 
-    # --- 2. Perform Two-Stage Stratified Split ---
+    # --- 2. Perform Conditional Stratified Split ---
+    
+    train_indices = []
+    val_indices = []
+    test_indices = []
 
-    # Stage 1: Train vs Temp (Val + Test)
-    train_X, _, temp_X, temp_y = iterative_train_test_split(
-        X, y, test_size=(test_size + val_size)
-    )
+    # Case 1: No validation or test (100% Train)
+    if val_size == 0 and test_size == 0:
+        train_indices = X.flatten()
+    
+    else:
+        # Stage 1: Split Train vs (Val + Test)
+        # We perform this split if there is *any* holdout data required
+        train_X, _, temp_X, temp_y = iterative_train_test_split(
+            X, y, test_size=(test_size + val_size)
+        )
+        train_indices = train_X.flatten()
 
-    # Stage 2: Val vs Test (from Temp)
-    relative_test_size = test_size / (test_size + val_size)
+        # Handle the holdout data (temp_X)
+        if val_size == 0:
+            # Case 2: Train + Test only (No Validation)
+            test_indices = temp_X.flatten()
+        elif test_size == 0:
+            # Case 3: Train + Val only (No Test)
+            val_indices = temp_X.flatten()
+        else:
+            # Case 4: Train + Val + Test
+            # Calculate relative size of test set within the temp set
+            # relative_test = target_test / (target_test + target_val)
+            relative_test_size = test_size / (test_size + val_size)
 
-    val_X, _, test_X, _ = iterative_train_test_split(
-        temp_X, temp_y, test_size=relative_test_size
-    )
-
-    # Extract final indices (X holds dataset indices)
-    train_indices = train_X.flatten()
-    val_indices = val_X.flatten()
-    test_indices = test_X.flatten()
+            val_X, _, test_X, _ = iterative_train_test_split(
+                temp_X, temp_y, test_size=relative_test_size
+            )
+            val_indices = val_X.flatten()
+            test_indices = test_X.flatten()
 
     # --- 3. Create Data Subsets ---
+    # Use simple list slicing logic
     train_data = [transformed_dataset[i] for i in train_indices]
     val_data = [transformed_dataset[i] for i in val_indices]
     test_data = [transformed_dataset[i] for i in test_indices]
 
     # --- 4. Define Hugging Face Features ---
+    # Ensure tags are sorted by ID for the ClassLabel feature
     bio_tags = sorted(tag_to_id.keys(), key=lambda k: tag_to_id[k])
+    
     features = datasets.Features({
         "id": datasets.Value("string"),
+        # Optional: Add 'text' if your dataset has it, otherwise remove
+        "text": datasets.Value("string"), 
         "tokens": datasets.Sequence(datasets.Value("string")),
         "ner_tags": datasets.Sequence(datasets.ClassLabel(names=bio_tags))
     })
 
     # --- 5. Assemble the DatasetDict ---
-    train_dataset = datasets.Dataset.from_list(train_data, features=features)
-    val_dataset = datasets.Dataset.from_list(val_data, features=features)
-    test_dataset = datasets.Dataset.from_list(test_data, features=features)
+    splits = {}
+    splits["train"] = datasets.Dataset.from_list(train_data, features=features)
 
-    dataset_dict = datasets.DatasetDict({
-        "train": train_dataset,
-        "validation": val_dataset,
-        "test": test_dataset
-    })
+    if len(val_data) > 0:
+        splits["validation"] = datasets.Dataset.from_list(val_data, features=features)
+
+    if len(test_data) > 0:
+        splits["test"] = datasets.Dataset.from_list(test_data, features=features)
+
+    dataset_dict = datasets.DatasetDict(splits)
 
     return dataset_dict
+
 
 def analyze_annotation_data(file_path: str, annotator_importance = CLIRENER_ANNOTATOR_IMPORTANCE) -> pd.DataFrame:
     """
@@ -809,20 +921,25 @@ def analyze_annotation_data(file_path: str, annotator_importance = CLIRENER_ANNO
         data = json.load(f)
 
     for task in data:
-        if not task.get('annotations'):
-            continue
-            
-        selected_annotations = None
-        annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
         
-        for annotator_id in annotator_importance:
-            if annotator_id in annotations_by_id:
-                # If the preferred annotator is found, select their annotations and stop searching
-                selected_annotations = annotations_by_id[annotator_id].get('result', [])
-                break
+        if type(annotator_importance) != type(CLIRENER_ANNOTATOR_IMPORTANCE):
+            predictions = task.get('predictions')
+            selected_annotations = [p.get('result') for p in predictions][0]
+        else:
+            if not task.get('annotations'):
+                continue
+                
+            selected_annotations = None
+            annotations_by_id = {an['completed_by']: an for an in task.get('annotations', [])}
+            
+            for annotator_id in annotator_importance:
+                if annotator_id in annotations_by_id:
+                    # If the preferred annotator is found, select their annotations and stop searching
+                    selected_annotations = annotations_by_id[annotator_id].get('result', [])
+                    break
 
-        if selected_annotations is None:
-            continue    
+            if selected_annotations is None:
+                continue    
         
         for annotation in selected_annotations:
             if annotation.get('type') != 'labels':
@@ -853,3 +970,254 @@ def analyze_annotation_data(file_path: str, annotator_importance = CLIRENER_ANNO
     df = pd.DataFrame(analysis_data)
     # The second return value is the new dictionary of entity texts
     return df, all_entity_texts
+
+
+def convert_to_labelstudio_format(data, paper_id, model_version="gliner-community/gliner_medium-v2.5"):
+    if not isinstance(data, list):
+        raise TypeError("Expected data to be a list of dictionaries, but got: {}".format(type(data)))
+    
+    labelstudio_data = []
+    
+    for item in data:
+        if not isinstance(item, dict) or "entities" not in item:
+            continue
+        
+        predictions = {
+            "model_version": model_version,
+            "score": 0.5,  # Default score for the overall prediction
+            "result": []
+        }
+        
+        for entity in item.get("entities", []):
+            if not isinstance(entity, dict):
+                continue
+            
+            predictions["result"].append({
+                "id": str(uuid.uuid4())[:8],
+                "from_name": "label",
+                "to_name": "text",
+                "type": "labels",
+                "value": {
+                    "start": entity.get("start", 0),
+                    "end": entity.get("end", 0),
+                    "score": entity.get("score", 0.0),
+                    "text": entity.get("text", ""),
+                    "labels": [entity.get("label", "Unknown")]
+                }
+            })
+        
+        item["paper_id"] = paper_id
+        labelstudio_data.append({"data": item, "predictions": [predictions]})
+    
+    return labelstudio_data
+
+
+def process_llm_jsonl_results(file_path):
+    """
+    Transforms the JSONL output from the LLM NER script into the 
+    standardized dataset format used by cwed4eta_process_json_file.
+    """
+    dataset = []
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Parse the JSON line (representing one task/sentence)
+                task = json.loads(line)
+                
+                if task.get("raw_llm_response") is None:
+                    continue
+                
+                # In our JSONL, compound_id and input_text were stored at top level
+                text = task.get("input_text", "")
+                compound_id = task.get("compound_id", "unknown-id")
+                
+                # The entities were stored in 'processed_entities' key
+                # We map them to your standardized format: text, label, start, end
+                entities = []
+                for ent in task.get("processed_entities", []):
+                    # We only add if we have valid span indices
+                    if "span" in ent:
+                        temp_label = ent["category"]
+                        if temp_label == "Policy or Objective":
+                            temp_label = "Policy"
+                        entities.append({
+                            "text": ent["entity_text"],
+                            "label": temp_label,
+                            "start": ent["span"][0],
+                            "end": ent["span"][1],
+                            # Optional: include reasoning for debugging/analysis
+                            "reasoning": ent.get("reasoning", "") 
+                        })
+                
+                # Append to final list in the format your pipeline expects
+                dataset.append({
+                    "text": text,
+                    "entities": entities,
+                    "id": compound_id
+                })
+                
+    except FileNotFoundError:
+        print(f"Error: File {file_path} not found.")
+    except Exception as e:
+        print(f"An error occurred during processing: {e}")
+        
+    return dataset
+
+def shorten_name(name):
+    """Transforms a Hugging Face ID into a clean, filename-safe string."""
+    name = name.split("/")[-1]
+    name = re.sub(r"[^a-zA-Z0-9]", "_", name)
+    name = re.sub(r"_+", "_", name)
+    return name.strip("_")
+
+# Stats calc
+
+def calculate_advanced_metrics(dataset_split, label_names):
+    """
+    Calculates advanced content-based metrics for NER datasets.
+    Normalizes metrics by token count rather than document count to handle
+    variable document sizes (sentences vs full papers).
+    """
+    
+    # --- Accumulators ---
+    total_tokens = 0
+    total_docs = 0
+    
+    # Entity Accumulators
+    all_entity_texts = []    # List of strings, e.g., ["carbon dioxide", "Paris", ...]
+    all_span_lengths = []    # List of integers
+    class_counts = Counter()
+    
+    # Structure Accumulators
+    total_entities = 0
+    adjacency_hits = 0       # Entities immediately following another
+    
+    # Pre-check
+    if len(dataset_split) == 0:
+        return None
+
+    for row in dataset_split:
+        tokens = row['tokens']
+        tags = row['ner_tags']
+        
+        doc_len = len(tokens)
+        total_tokens += doc_len
+        total_docs += 1
+        
+        # --- 1. Extract Entities from BIO Tags ---
+        # We need the exact span indices to check adjacency
+        current_entities = [] # Stores (start_index, end_index, label_name, text)
+        
+        i = 0
+        while i < len(tags):
+            tag_id = tags[i]
+            
+            # Skip invalid tags
+            if tag_id < 0 or tag_id >= len(label_names):
+                i += 1
+                continue
+                
+            tag_name = label_names[tag_id]
+            
+            if tag_name.startswith("B-"):
+                start_idx = i
+                class_type = tag_name[2:]
+                
+                # Look ahead for I- tags
+                j = i + 1
+                while j < len(tags):
+                    next_tag_id = tags[j]
+                    if next_tag_id < 0 or next_tag_id >= len(label_names):
+                        break
+                    next_tag_name = label_names[next_tag_id]
+                    if next_tag_name == f"I-{class_type}":
+                        j += 1
+                    else:
+                        break
+                end_idx = j # Exclusive
+                
+                # Capture Entity Details
+                span_text = " ".join(tokens[start_idx:end_idx])
+                span_len = end_idx - start_idx
+                
+                current_entities.append({
+                    "start": start_idx,
+                    "end": end_idx,
+                    "label": class_type,
+                    "text": span_text,
+                    "len": span_len
+                })
+                
+                # Update Loop index
+                i = j 
+            else:
+                i += 1
+
+        # --- 2. Update Aggregates ---
+        for ent in current_entities:
+            all_entity_texts.append(ent['text'])
+            all_span_lengths.append(ent['len'])
+            class_counts[ent['label']] += 1
+            
+        total_entities += len(current_entities)
+
+        # --- 3. Calculate Adjacency (Clumping) for this Doc ---
+        # We check if Entity B starts within 1 token of Entity A ending.
+        # This catches "A, B" (sep by comma) or "A B" (immediate).
+        for k in range(len(current_entities) - 1):
+            prev_end = current_entities[k]['end']
+            next_start = current_entities[k+1]['start']
+            
+            # Gap of 0 means immediate (end 5, start 5). 
+            # Gap of 1 means one separator (end 5, start 6 -> token 5 is sep).
+            gap = next_start - prev_end
+            if gap <= 1: 
+                adjacency_hits += 1
+
+    # --- 4. Final Calculations ---
+    
+    # A. Saturation (Density)
+    # Entities per 100 tokens. Comparable across doc sizes.
+    saturation = (total_entities / total_tokens) * 100 if total_tokens > 0 else 0
+    
+    # B. Vocabulary (TTR)
+    # Are we seeing new things, or the same 5 words repeated?
+    # Lowercase to ensure "Carbon" and "carbon" count as same type.
+    unique_entities = set(t.lower() for t in all_entity_texts)
+    vocab_size = len(unique_entities)
+    ttr = (vocab_size / total_entities) if total_entities > 0 else 0
+    
+    # C. Complexity (Long Spans)
+    # Percentage of entities longer than 4 tokens
+    long_spans = sum(1 for l in all_span_lengths if l >= 5)
+    long_span_ratio = (long_spans / total_entities) * 100 if total_entities > 0 else 0
+    
+    # D. Structure (Adjacency)
+    # What % of entities appear in a list/cluster?
+    adjacency_ratio = (adjacency_hits / total_entities) * 100 if total_entities > 0 else 0
+
+    # E. Class Balance (Normalized Entropy)
+    # 0 = All same class, 1 = Perfectly balanced
+    probs = [count / total_entities for count in class_counts.values()]
+    if len(probs) > 1:
+        entropy = -sum(p * math.log2(p) for p in probs)
+        max_entropy = math.log2(len(probs))
+        normalized_entropy = entropy / max_entropy
+    else:
+        normalized_entropy = 0.0
+
+    return {
+        "Total Tokens": total_tokens,
+        "Total Entities": total_entities,
+        "Saturation (%)": saturation,
+        "Entity TTR (0-1)": ttr,
+        "Avg Span Len": np.mean(all_span_lengths) if all_span_lengths else 0,
+        "Long Spans (>4t) %": long_span_ratio,
+        "Clumping (Adj) %": adjacency_ratio,
+        "Class Entropy (0-1)": normalized_entropy
+    }

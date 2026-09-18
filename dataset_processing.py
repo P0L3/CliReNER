@@ -709,7 +709,7 @@ def transform_to_ner_format(dataset, labels):
         ner_tags = [tag_to_id.get(tag, id_for_o) for tag in ner_tags_str]
         
         transformed_data.append({
-            'id': str(i),
+            'id': entry.get('id', str(i)),   # was: 'id': str(i),
             'text': text,
             'tokens': tokens,
             'ner_tags': ner_tags
