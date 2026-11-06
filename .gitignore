@@ -38,6 +38,7 @@
 !PROVENANCE/
 !PROVENANCE/hf_to_original_map.json
 
+thank_you_notes.txt
 # Specific ignores
 not_to_upload.txt
 mace.py
