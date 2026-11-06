@@ -1,0 +1,38 @@
+I read through both docs carefully and cross-checked the new citations. Good news: your own inline vetting comments in doc 34 caught the one thing that actually matters here. Bad news: it's a real problem, not a nitpick, so let's fix it before anything else.
+
+## The Callaghan framing needs to change — this isn't optional polish
+
+I pulled the actual Callaghan et al. (2021) abstract to double-check your read: *"we use the language model BERT to **identify and classify** studies on observed climate impacts, producing a comprehensive machine-learning-assisted evidence map."* That's document-level classification of ~100k papers into a coarse label set — no span-level entity extraction. Your comment is exactly right, and the current draft's "applied text classification **and extraction**" quietly claims something the paper doesn't do.
+
+This matters more here than it would for a random citation, because R1.Rm4's whole complaint was that the "scientific community increasingly relies on NLP/NER" claim was *unsubstantiated* — if the fix for that introduces a citation that overstates what its source actually does, and a reviewer who knows this fairly well-known Nature Climate Change paper notices, you've replaced one credibility problem with a worse one. R3 in particular reads closely.
+
+The good news: the honest version of this claim is actually **more persuasive**, not less. Reframe it as: even coarse, manually-curated document classification has already proven valuable enough to publish in Nature Climate Change — and the bottleneck is that it's manual/coarse. That's a stronger motivation for fine-grained NER than pretending NER already happened there. Suggested replacement:
+
+> Machine-learning-assisted evidence synthesis has already demonstrated the value of automated literature analysis directly in the climate domain: \citet{Callaghan2021evidence} used a fine-tuned language model to classify roughly 100,000 climate-impact studies, exposing systematic gaps in the geographic attribution of climate evidence, while a comparable classification pipeline over climate-policy literature \citep{callaghan2025climatepolicy} revealed sectoral and regional disparities between scientific attention and enacted policy. These pipelines operate at the document level, however, relying on manually curated, coarse label sets; fine-grained NER would extend this pattern to the entity level, automatically supplying the typed building blocks — drivers, affected systems, locations, measurements, and policy responses — that such evidence-mapping pipelines currently obtain only through manual screening.
+
+This keeps your "+1 concrete climate example" requirement satisfied (R1.Rm4) and your Table 1/entity-saturation forward-pointer still slots in right after it.
+
+## The rest of your vetting — I agree with all of it
+- **trialstreamer / SanchezGraillet2022**: your read is right, PICO-based span extraction feeding relation prediction is a legitimate entity-level precedent. Fine as-is.
+- **weston2019ner**: confirmed real, well-cited materials-science NER paper (mentions, sample descriptors, phase labels, properties, synthesis methods) — genuinely close to your own setup. Keep, and it's strong enough to lead with if you want to reorder.
+- **Kim2017**: agreed, cut it — no reason to keep a weaker citation once weston2019 alone is spot-on.
+- **nguyen2019copious / abdelmageed-et-al2022**: confirmed correct (COPIOUS is real biodiversity NER; Abdelmageed is NER+RE). Fine.
+
+## One thing you haven't resolved yet: the old commented-out biomedicine line
+Leaving `% The effectiveness of these approaches has been demonstrated in high-resource domains, including biomedicine and chemistry \citep{lee2019biobert, fries2022bigbio, Morin2023ICCV, wangetal2021chemner}.` commented out rather than deleted isn't just a style choice — check whether **Fries2022bigbio, Morin2023ICCV, and wangetal2021chemner are cited anywhere else in the paper.** I checked the current manuscript: they aren't. If this line stays commented (i.e., effectively deleted from the compiled text) and nothing else cites them, those three become orphaned bibliography entries — the kind of thing a copy-editor or citation checker flags. `lee2019biobert` is safe, it's still cited in the very next sentence. My recommendation: delete the commented line outright, and drop Fries2022/Morin2023/Wang2021chemner from the .bib unless you want to keep one of them cited elsewhere (e.g., Related Work already has room for a biomedical-NER mention if you want it there instead).
+
+## The "Fig. F2" reference in doc 33 is stale — here's the resolution
+The earlier draft note flagged not knowing what Fig. F2 maps to now. I checked: **there is no Figure F2 in the current appendix numbering at all** (figures run A1/A2, B3, C1/C4, D2–D4, F5, G5, H6–H8, K7/K9/K10, L8). The task this was meant to serve — "argue why more types help downstream users; pull findings into main text" — maps cleanly onto **Figure G5 (Appendix G, Entity Type Mapping Results)**, which already shows CliReNER types cleanly separating what other schemas conflate (e.g., ClimateIE's "instrument" splitting into Measuring Device vs. Method). That's a better fit than the old F2 pointer anyway, since it's a direct, already-computed demonstration rather than a general provenance narrative. Suggested pull-through sentence, using content you already have:
+
+> As shown in Appendix G (Figure G5), several of CliReNER's types resolve ambiguity present in coarser existing schemas — for instance, ClimateIE's *instrument* maps across both Measuring Device and Method, and Climate-Change NER's *climate-observations* disambiguates into Measuring Device, Satellite, and Intellectual Artefact — indicating that the added granularity tracks genuine distinctions rather than arbitrary label proliferation.
+
+## What's still open, in order
+
+1. **Fix the Callaghan paragraph** (above) — highest priority, blocks everything else in this section from being submission-safe.
+2. **Clean up the orphaned-reference issue** — quick, mechanical, do it now while you're in this file.
+3. **Insert the G5 pull-through sentence** in place of the old F2 placeholder.
+4. **Place the density-relocation sentence** — the one-liner from doc 33 is fine, drop it right after the Callaghan/NER-application paragraph, before "As shown in these specialised domains...".
+5. **Worked-example textbox (Box 1) — this is the one I can't finish without you.** The template in doc 33 is good (typed mentions → downstream relation → research use, with the explicit "NER extracts, RE is future work" disclaimer, which correctly avoids overclaiming causal knowledge). But it's still a placeholder. I don't have access to the actual CliReNER_gold sentences — could you paste 2–3 real candidate sentences (ideally ones with a driver→outcome pair, e.g. a Chemical/Meteorological Phenomenon affecting a Quantity/Ecosystem/Body of Water, per the template's own suggestion)? I can help pick the strongest one and tighten the box copy once I have real text to work with.
+6. **Conclusion expansion (P2)** — lowest priority, hold until 1–5 are settled since the conclusion should echo whatever framing wins out above.
+
+Send over those candidate gold sentences whenever you're ready and I'll draft Box 1.
